@@ -1,0 +1,17 @@
+name: gate-selftest
+
+# Temporary: runs the merge gate in Actions against this PR's head SHA with auto-merge's token permissions.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  checks: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - env: { GH_TOKEN: "${{ github.token }}" }
+        run: bash tools/harness/merge-gate.sh ${{ github.event.pull_request.head.sha }} 1500
