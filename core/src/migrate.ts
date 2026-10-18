@@ -84,6 +84,8 @@ export async function migrate(opts: { url: string; appRole: string; appPassword?
       grant select on core.members, core.migrations to ${app};
       grant select, insert on core.events, logs.logs to ${app};
       grant select, update on core.flags to ${app};
+      grant select, insert, update on core.settings to ${app};
+      grant update (locale) on core.members to ${app};
       grant usage on all sequences in schema core, logs to ${app};`);
   } finally {
     await client.query("select pg_advisory_unlock($1)", [LOCK_ID]).catch(() => {});

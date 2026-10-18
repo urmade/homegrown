@@ -1,15 +1,15 @@
 import { Badge, Card, EmptyState, Notice, PageHeader } from "@homegrown/ui";
 import type { DataFlow } from "@homegrown/core";
-import { readDataFlow } from "../../../lib/server";
+import { getT, readDataFlow, resolveLocale, type Translate } from "../../../lib/server";
 
-function CallGraph({ flow }: { flow: DataFlow }) {
+function CallGraph({ flow, label }: { flow: DataFlow; label: string }) {
   const names = flow.modules.map((m) => m.name);
   const w = Math.max(320, names.length * 220);
   const x = (name: string) => ((names.indexOf(name) + 0.5) * w) / names.length;
   const edges = flow.calls.map((c, i) => ({ ...c, a: c.from.split(".")[0]!, b: c.to.split(".")[0]!, i }));
   const top = 36 - edges.length * 9;
   return (
-    <svg viewBox={`0 ${top} ${w} ${130 - top}`} className="h-auto w-full" role="img" aria-label="Modul-Aufrufgraph">
+    <svg viewBox={`0 ${top} ${w} ${130 - top}`} className="h-auto w-full" role="img" aria-label={label}>
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="var(--color-accent)" />
@@ -49,20 +49,25 @@ const List = ({ label, items }: { label: string; items: string[] }) =>
     </p>
   ) : null;
 
-export default function DataFlowPage() {
+export default async function DataFlowPage() {
   const flow = readDataFlow();
-  if (!flow) return <EmptyState>data-flow.json fehlt. Es wird beim Image-Build erzeugt (pnpm gen:data-flow).</EmptyState>;
+  const locale = await resolveLocale();
+  const t: Translate = await getT("core", locale);
+  if (!flow) return <EmptyState>{t("dataFlow.missing")}</EmptyState>;
   return (
     <>
-      <PageHeader title="Datenfluss" description={`Generiert ${new Date(flow.generatedAt).toLocaleString("de-DE")}${flow.sha ? ` · ${flow.sha.slice(0, 7)}` : ""}`} />
+      <PageHeader
+        title={t("dataFlow.title")}
+        description={[t("dataFlow.generated", { date: new Date(flow.generatedAt).toLocaleString(locale) }), flow.sha?.slice(0, 7)].filter(Boolean).join(" · ")}
+      />
       {flow.errors.map((e) => (
         <Notice key={e} tone="danger">
           {e}
         </Notice>
       ))}
       <Card className="mb-6">
-        <h2 className="mb-2 font-semibold">Modul-Aufrufe</h2>
-        {flow.calls.length === 0 ? <p className="text-sm text-fg-muted">Keine modulübergreifenden Aufrufe.</p> : <CallGraph flow={flow} />}
+        <h2 className="mb-2 font-semibold">{t("dataFlow.calls")}</h2>
+        {flow.calls.length === 0 ? <p className="text-sm text-fg-muted">{t("dataFlow.noCalls")}</p> : <CallGraph flow={flow} label={t("dataFlow.graph")} />}
         <ul className="mt-2 space-y-1 text-sm">
           {flow.calls.map((c) => (
             <li key={`${c.from}-${c.to}`} className="break-words">
@@ -72,7 +77,7 @@ export default function DataFlowPage() {
         </ul>
       </Card>
 
-      <h2 className="mb-3 text-lg font-semibold">Module</h2>
+      <h2 className="mb-3 text-lg font-semibold">{t("dataFlow.modules")}</h2>
       <div className="mb-6 grid gap-4 md:grid-cols-2">
         {flow.modules.map((m) => (
           <Card key={m.name}>
@@ -84,11 +89,11 @@ export default function DataFlowPage() {
                 <li key={f.name}>
                   <div className="flex flex-wrap items-center gap-2">
                     <code className="font-medium">{f.name}</code>
-                    {f.name in m.exports && <Badge tone="accent">exportiert</Badge>}
+                    {f.name in m.exports && <Badge tone="accent">{t("dataFlow.exported")}</Badge>}
                   </div>
-                  <List label="liest" items={f.reads} />
-                  <List label="schreibt" items={f.writes} />
-                  <List label="ruft" items={f.calls} />
+                  <List label={t("dataFlow.reads")} items={f.reads} />
+                  <List label={t("dataFlow.writes")} items={f.writes} />
+                  <List label={t("dataFlow.calls.label")} items={f.calls} />
                 </li>
               ))}
             </ul>
@@ -96,20 +101,20 @@ export default function DataFlowPage() {
         ))}
       </div>
 
-      <h2 className="mb-3 text-lg font-semibold">Tabellen</h2>
+      <h2 className="mb-3 text-lg font-semibold">{t("dataFlow.tables")}</h2>
       <div className="grid gap-4 md:grid-cols-2">
-        {flow.tables.map((t) => (
-          <Card key={t.name}>
+        {flow.tables.map((table) => (
+          <Card key={table.name}>
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <code className="font-semibold">{t.name}</code>
-              <Badge>Besitzer: {t.owner}</Badge>
+              <code className="font-semibold">{table.name}</code>
+              <Badge>{t("dataFlow.owner", { owner: table.owner })}</Badge>
             </div>
             <ul className="divide-y divide-border text-sm">
-              {t.columns.map((c) => (
+              {table.columns.map((c) => (
                 <li key={c.name} className="py-2">
                   <code>{c.name}</code> <span className="text-xs text-fg-muted">{c.type}</span>
-                  <List label="schreibt" items={c.writers} />
-                  <List label="liest" items={c.readers} />
+                  <List label={t("dataFlow.writes")} items={c.writers} />
+                  <List label={t("dataFlow.reads")} items={c.readers} />
                 </li>
               ))}
             </ul>

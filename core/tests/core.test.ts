@@ -2,6 +2,9 @@ import { DummyDriver, Kysely, PostgresAdapter, PostgresIntrospector, PostgresQue
 import { describe, expect, it } from "vitest";
 import { buildDataFlow } from "../src/dataflow";
 import { collectAccess } from "../src/db";
+import { messagesFor, translator } from "../src/i18n";
+import coreDe from "../messages/de.json";
+import coreEn from "../messages/en.json";
 import { redact } from "../src/log";
 import { ModuleManifest } from "../src/manifest";
 import { runtimeCaching } from "../src/pwa";
@@ -71,5 +74,18 @@ describe("service worker composition", () => {
     for (const p of ["/admin", "/admin/logs", "/api/auth/x", "/health", "/pantry/health"]) expect(match({ url: new URL(`http://h${p}`) })).toBe(true);
     expect(rules.some((r) => r.handler === "CacheFirst" && String(r.urlPattern).includes("pantry"))).toBe(true);
     expect(rules.some((r) => r.method === "POST" && r.options?.backgroundSync?.name === "writes-pantry")).toBe(true);
+  });
+});
+
+describe("i18n", () => {
+  it("core.i18n.translate interpolates variables and falls back to English, then to the key", () => {
+    const t = translator(messagesFor({ en: { hi: "Hello {name}", only: "English only" }, de: { hi: "Hallo {name}" } }, "de"));
+    expect(t("hi", { name: "Ada" })).toBe("Hallo Ada");
+    expect(t("only")).toBe("English only");
+    expect(t("missing.key")).toBe("missing.key");
+  });
+
+  it("core.i18n.catalogs core en and de define the same keys", () => {
+    expect(Object.keys(coreDe).sort()).toEqual(Object.keys(coreEn).sort());
   });
 });

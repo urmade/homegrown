@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { loadManifests, repoRoot } from "./manifest";
 
@@ -19,13 +19,28 @@ export function generateRegistry(root = repoRoot()) {
   const out = join(root, ".homegrown");
   const rel = (to: string) => relative(out, to).replaceAll("\\", "/");
 
+  const locales = (dir: string) =>
+    existsSync(join(dir, "messages")) ? readdirSync(join(dir, "messages")).filter((f) => /^[a-z]{2}(-[A-Z]{2})?\.json$/.test(f)).sort().map((f) => f.slice(0, -5)) : [];
+  const id = (m: { manifest: { name: string } }) => camel(m.manifest.name);
+
   write(
     join(out, "registry.server.ts"),
     mods
-      .map((m) => `import ${camel(m.manifest.name)}Manifest from "${rel(join(m.dir, "module.json"))}";\nimport * as ${camel(m.manifest.name)}Fns from "${rel(join(m.dir, "src/functions"))}";`)
+      .map((m) =>
+        [
+          `import ${id(m)}Manifest from "${rel(join(m.dir, "module.json"))}";`,
+          `import * as ${id(m)}Fns from "${rel(join(m.dir, "src/functions"))}";`,
+          ...locales(m.dir).map((l) => `import ${id(m)}_${l.replace("-", "_")} from "${rel(join(m.dir, "messages", `${l}.json`))}";`),
+        ].join("\n"),
+      )
       .join("\n") +
-      `\nimport { ModuleManifest } from "../core/src/manifest";\n\nexport const modules: { manifest: ModuleManifest; functions: Record<string, unknown> }[] = [\n${mods
-        .map((m) => `  { manifest: ModuleManifest.parse(${camel(m.manifest.name)}Manifest), functions: ${camel(m.manifest.name)}Fns as Record<string, unknown> },`)
+      `\nimport { ModuleManifest } from "../core/src/manifest";\nimport type { RegisteredModule } from "../core/src/runtime";\n\nexport const modules: RegisteredModule[] = [\n${mods
+        .map(
+          (m) =>
+            `  { manifest: ModuleManifest.parse(${id(m)}Manifest), functions: ${id(m)}Fns as Record<string, unknown>, messages: { ${locales(m.dir)
+              .map((l) => `"${l}": ${id(m)}_${l.replace("-", "_")}`)
+              .join(", ")} } },`,
+        )
         .join("\n")}\n];\n`,
   );
 
