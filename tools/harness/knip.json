@@ -1,0 +1,69 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "tools/harness/*.ts",
+        "tools/harness/e2e/*.spec.ts",
+        ".cursor/hooks/*.mjs"
+      ],
+      "project": [
+        "tools/harness/**/*.ts",
+        ".cursor/hooks/*.mjs"
+      ],
+      "ignoreDependencies": [
+        "prettier"
+      ]
+    },
+    "core": {
+      "entry": [
+        "bin/*.ts",
+        "tests/*.test.ts"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "bin/**/*.ts",
+        "tests/**/*.ts"
+      ]
+    },
+    "packages/ui": {
+      "project": [
+        "src/**/*.tsx"
+      ]
+    },
+    "packages/deploy-agent": {
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "apps/web": {
+      "project": [
+        "**/*.{ts,tsx}"
+      ],
+      "ignoreDependencies": [
+        "tailwindcss"
+      ]
+    },
+    "apps/*": {
+      "entry": [
+        "src/functions.ts",
+        "src/page.tsx",
+        "tests/**/*.test.ts",
+        "e2e/**/*.spec.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "tests/**/*.ts",
+        "e2e/**/*.ts"
+      ]
+    }
+  },
+  "ignoreExportsUsedInFile": true,
+  "include": [
+    "files",
+    "dependencies",
+    "unlisted",
+    "exports",
+    "duplicates"
+  ]
+}

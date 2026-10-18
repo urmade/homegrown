@@ -1,0 +1,7 @@
+---
+description: Module rules
+globs: apps/**
+---
+
+- Reference other data only by core member ids; no cross-module foreign keys (check-migrations).
+- Cross-module calls are declared capabilities, Zod-validated, in the caller's transaction (tsc on the generated client).

@@ -1,0 +1,6 @@
+---
+description: PWA rules
+globs: apps/*/module.json,apps/web/**
+---
+
+- The app is a PWA; each module declares offline behaviour in module.json, and every declared route has an offline test (check-pwa).

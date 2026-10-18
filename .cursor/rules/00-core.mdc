@@ -1,0 +1,12 @@
+---
+description: Core boundaries
+alwaysApply: true
+---
+
+- Never edit core/ or harness paths in a feature PR (guard-core hook, check-core).
+- A module touches only its own schema; other modules only via ctx.modules (per-module DB role in tests).
+- Declare every read, write and call in module.json; the data-flow map must stay green (check-data-flow).
+- All DB access via ctx.db; no raw database clients in modules (lint, check-data-flow).
+- Identity via ctx.auth.currentMember() (lint).
+- No real household data or secrets anywhere, incl. PR bodies and run records (check-secrets).
+- UI copy de-DE; code, docs, commits English (reviewer).

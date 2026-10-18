@@ -1,0 +1,5 @@
+{
+  "name": "homegrown agent VM",
+  "install": "bash tools/harness/agent-vm-setup.sh",
+  "start": "sudo service postgresql start"
+}

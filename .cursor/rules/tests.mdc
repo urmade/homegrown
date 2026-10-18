@@ -1,0 +1,6 @@
+---
+description: Test rules
+globs: **/*.test.ts,**/*.spec.ts,docs/specs/**
+---
+
+- Every acceptance criterion maps to a named test id; no new skip/only/todo (check-evidence, check-tests).

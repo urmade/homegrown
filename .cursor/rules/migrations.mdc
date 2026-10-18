@@ -1,0 +1,6 @@
+---
+description: Migration rules
+globs: apps/*/migrations/**
+---
+
+- Migrations are additive; removals via expand-contract with a 7-day grace, never edit an applied migration (check-migrations, ledger checksum).

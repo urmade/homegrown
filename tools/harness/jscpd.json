@@ -1,0 +1,12 @@
+{
+  "threshold": 100,
+  "minLines": 8,
+  "minTokens": 70,
+  "reporters": ["json"],
+  "output": "artifacts/jscpd",
+  "format": ["typescript", "tsx"],
+  "path": ["apps", "packages", "core"],
+  "ignore": ["**/node_modules/**", "**/.next/**", "**/.generated/**"],
+  "silent": true,
+  "gitignore": true
+}

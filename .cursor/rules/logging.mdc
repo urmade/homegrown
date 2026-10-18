@@ -1,0 +1,6 @@
+---
+description: Logging rules
+globs: **/*.ts,**/*.tsx
+---
+
+- Use ctx.log only; no console.*; never log content, personal data or secrets (lint, redaction in core).
