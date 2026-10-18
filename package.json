@@ -1,0 +1,25 @@
+{
+  "name": "homegrown",
+  "private": true,
+  "packageManager": "pnpm@10.33.4",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "gen": "tsx core/bin/gen.ts",
+    "migrate": "tsx core/bin/migrate.ts",
+    "gen:data-flow": "tsx core/bin/gen-data-flow.ts",
+    "dev": "pnpm gen && pnpm --filter @homegrown/web dev",
+    "build": "pnpm gen && pnpm --filter @homegrown/web build",
+    "start": "pnpm --filter @homegrown/web start",
+    "typecheck": "pnpm gen && tsc -p tsconfig.json --noEmit"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "sharp", "@tailwindcss/oxide"]
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
+  }
+}

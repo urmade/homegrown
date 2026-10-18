@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.homegrown/
+.generated/
+apps/web/public/sw.js
+apps/web/next-env.d.ts
+*.tsbuildinfo
+.env
+test-results/
+playwright-report/
+artifacts/
