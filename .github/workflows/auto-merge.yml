@@ -1,29 +1,35 @@
 name: auto-merge
 
-# Non-harness PRs merge themselves once required checks pass. Harness PRs wait for CODEOWNERS review.
-# Drafts are ignored. pull_request only; GITHUB_TOKEN only.
+# Merges non-harness PRs whose latest ci run is green and whose branch contains current main.
+# Runs only main's copy of this workflow and of tools/harness (workflow_run/schedule/dispatch never use PR code),
+# so a PR cannot change the rules that merge it. Harness PRs (CODEOWNERS paths) wait for owner review.
+# See tools/harness/auto-merge.sh. GITHUB_TOKEN only; never pull_request_target.
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+  # Catches anything an event missed (dropped pending runs, re-runs, outages).
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
+  actions: write
+  issues: write
+
+# One sweep at a time, so merges are serialized and each sees the main the previous one produced.
+concurrency:
+  group: auto-merge
+  cancel-in-progress: false
 
 jobs:
-  enable:
-    if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
+  sweep:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      - name: skip harness PRs
-        id: scope
-        run: |
-          git diff --name-only "origin/${{ github.base_ref }}...HEAD" > changed.txt
-          if grep -qE '^(AGENTS\.md|harness\.lock\.json|\.cursor/(rules|skills|agents|hooks)/|\.cursor/hooks\.json|\.github/|tools/harness/)' changed.txt; then
-            echo "harness=true" >> "$GITHUB_OUTPUT"
-          fi
-      - if: steps.scope.outputs.harness != 'true'
-        env: { GH_TOKEN: "${{ github.token }}" }
-        run: gh pr merge ${{ github.event.pull_request.number }} --auto --squash
+        with: { ref: main, fetch-depth: 0 }
+      - env: { GH_TOKEN: "${{ github.token }}" }
+        run: bash tools/harness/auto-merge.sh

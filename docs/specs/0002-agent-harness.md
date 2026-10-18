@@ -8,6 +8,15 @@ Root AGENTS.md, rules, skills, reviewer, hooks, CI gates and CODEOWNERS (Agent H
 - [core.pwa.never-cache] check-pwa fails if admin, logs, auth or health responses are cached.
 - [core.i18n.first-setup] A fresh install asks for the household language first; English is the default (e2e global setup picks it through the real flow).
 - [core.i18n.member-override] A member can switch their own language without changing the household's.
+- [harness.merge-gate.green] Auto-merge merges only when the latest ci run on the head SHA completed with success (every ci job is required).
+- [harness.merge-gate.red] A failed, cancelled or timed-out run blocks the merge (the bot retries failed jobs once per SHA).
+- [harness.merge-gate.pending-missing] Pending or missing runs never merge; a missing run is dispatched.
+- [harness.merge-gate.latest] The most recently started run, including re-run attempts, decides.
+- [harness.paths.single-source] Harness paths come only from CODEOWNERS (is-harness.sh and lib.ts agree).
+- [harness.paths.mixed] Any harness path makes the PR harness.
+- [harness.paths.renames-deletions] Moving or deleting a harness file is harness.
+- [deploy.staging-revert] A failed staging rehearsal pushes a revert and leaves prod untouched.
+- [deploy.green-rule] The deploy agent uses the gate's rule: latest ci run completed with success.
 - [deploy.rollback-after-promote] The full test suite includes the deploy agent's rollback-after-promote test.
 
 Offline: no new routes.

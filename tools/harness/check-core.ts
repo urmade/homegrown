@@ -6,8 +6,10 @@ const lock = JSON.parse(read("harness.lock.json")) as { upstream: string };
 const branch = process.env.GITHUB_HEAD_REF ?? process.env.GITHUB_REF_NAME ?? "";
 const upstream = process.env.GITHUB_REPOSITORY === lock.upstream;
 
+// On main the change was already gated as a PR (e.g. a merged upgrade-core branch); the rule applies to PR branches.
+const onMain = branch === "main" && !process.env.GITHUB_HEAD_REF;
 const core = files.filter((f) => f.startsWith("core/"));
-if (core.length && !upstream && !branch.startsWith("upgrade-core/"))
+if (core.length && !upstream && !onMain && !branch.startsWith("upgrade-core/"))
   fail(`core/ is vendored and read-only; use the upgrade-core skill. Touched: ${core.join(", ")}`);
 
 const harness = files.filter(isHarness);

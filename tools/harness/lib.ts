@@ -5,7 +5,7 @@ export const git = (...args: string[]) => execFileSync("git", args, { encoding: 
 
 /** PR base in CI (GITHUB_BASE_REF), HG_BASE locally, previous commit on main pushes. */
 export function baseRef(): string {
-  const ref = process.env.HG_BASE ?? (process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : "HEAD~1");
+  const ref = process.env.HG_BASE || (process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : "HEAD~1");
   try {
     return git("merge-base", ref, "HEAD");
   } catch {
@@ -41,7 +41,14 @@ export const showAtBase = (path: string, base = baseRef()): string | null => {
 
 export const read = (path: string) => readFileSync(path, "utf8");
 
-export const HARNESS_PATHS = [/^AGENTS\.md$/, /^\.cursor\/(rules|skills|agents|hooks)\//, /^\.cursor\/hooks\.json$/, /^\.github\//, /^tools\/harness\//, /^harness\.lock\.json$/];
+/** .github/CODEOWNERS is the single definition of harness paths (also read by is-harness.sh). */
+export const HARNESS_PATHS = readFileSync(new URL("../../.github/CODEOWNERS", import.meta.url), "utf8")
+  .split("\n")
+  .filter((l) => l.trim() && !l.trim().startsWith("#"))
+  .map((l) => {
+    const p = l.trim().split(/\s+/)[0]!.replace(/^\//, "").replace(/[.]/g, "\\.");
+    return new RegExp(`^${p.endsWith("/") ? `${p}.*` : p}$`);
+  });
 export const isHarness = (p: string) => HARNESS_PATHS.some((r) => r.test(p));
 
 let failed = false;
