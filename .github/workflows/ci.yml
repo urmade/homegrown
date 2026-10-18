@@ -126,8 +126,11 @@ jobs:
           printf 'POSTGRES_PASSWORD=ci-only-pg\nAPP_DB_PASSWORD=ci-only-app\n' > .env
           docker compose up -d --build --wait app
           curl -fsS localhost:3000/health
-          for m in $(ls apps/*/module.json 2>/dev/null | xargs -rn1 dirname | xargs -rn1 basename); do curl -fsS "localhost:3000/$m/health"; curl -fsS -o /dev/null "localhost:3000/$m"; done
-          curl -fsS localhost:3000/admin/data-flow | grep -q 'Datenfluss'
+          test "$(curl -s -o /dev/null -w '%{redirect_url}' localhost:3000/)" = "http://localhost:3000/setup"
+          # Equivalent of choosing English on /setup (a server action, not curl-able).
+          docker compose exec -T db psql -U postgres homegrown -qc "insert into core.settings (key, value) values ('household_locale', 'en')"
+          for m in $(ls apps/*/module.json 2>/dev/null | xargs -rn1 dirname | xargs -rn1 basename); do curl -fsS "localhost:3000/$m/health"; test "$(curl -s -o /dev/null -w '%{http_code}' "localhost:3000/$m")" = 200; done
+          curl -fsS localhost:3000/admin/data-flow | grep -q 'Data flow'
       - if: failure()
         run: docker compose logs
 
