@@ -5,7 +5,7 @@ import type { DB } from "./db";
 
 const fn = defineFunctions<DB, Calls>();
 
-const Item = z.object({ id: z.string(), name: z.string(), unit: z.string(), quantity: z.number(), min_quantity: z.number() });
+const Item = z.object({ id: z.string(), name: z.string(), unit: z.string().nullable(), quantity: z.number(), min_quantity: z.number() });
 export type Item = z.infer<typeof Item>;
 
 export const listItems = fn(z.object({}), z.array(Item), async (ctx) =>
@@ -15,7 +15,7 @@ export const listItems = fn(z.object({}), z.array(Item), async (ctx) =>
 export const addItem = fn(
   z.object({
     name: z.string().trim().min(1).max(80),
-    unit: z.string().trim().min(1).max(20).default("Stück"),
+    unit: z.string().trim().max(20).optional(),
     quantity: z.number().int().min(0).default(0),
     minQuantity: z.number().int().min(0).default(0),
   }),
@@ -24,7 +24,7 @@ export const addItem = fn(
     const member = await ctx.auth.currentMember();
     return ctx.db
       .insertInto("pantry.items")
-      .values({ name: input.name, unit: input.unit, quantity: input.quantity, min_quantity: input.minQuantity, updated_by: member.id })
+      .values({ name: input.name, unit: input.unit || null, quantity: input.quantity, min_quantity: input.minQuantity, updated_by: member.id })
       .returning("id")
       .executeTakeFirstOrThrow();
   },
@@ -44,7 +44,7 @@ export const adjustQuantity = fn(
 
 export const listLowStock = fn(
   z.object({}),
-  z.array(z.object({ id: z.string(), name: z.string(), unit: z.string(), missing: z.number() })),
+  z.array(z.object({ id: z.string(), name: z.string(), unit: z.string().nullable(), missing: z.number() })),
   async (ctx) => {
     const rows = await ctx.db
       .selectFrom("pantry.items")

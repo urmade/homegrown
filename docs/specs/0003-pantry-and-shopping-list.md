@@ -15,6 +15,9 @@ Two small modules that show cross-module communication through a declared capabi
 - [shopping.low-stock-import] "Aus Vorrat ergänzen" adds every low pantry item once, via `pantry.listLowStock`.
 - [shopping.isolation] The shopping-list role cannot read pantry tables.
 - [shopping.e2e-low-stock] End to end in the UI: a low pantry item lands on the shopping list and can be checked off.
+- [shopping.offline-replay] An entry added while offline is queued by the service worker and replayed by background sync when the connection is back.
+
+UI copy ships in English (default) and German via `messages/en.json` and `messages/de.json`; units are stored as data and empty units render as the localized "pcs".
 
 Offline: both pages are readable offline (network-first). Shopping-list writes are queued and replayed (last write wins); pantry writes are not queued.
 

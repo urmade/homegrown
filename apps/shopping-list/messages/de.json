@@ -1,0 +1,17 @@
+{
+  "title": "Einkaufsliste",
+  "description": "Gemeinsam einkaufen, auch offline.",
+  "open": "{count} offen",
+  "addLowStock": "Aus Vorrat ergänzen",
+  "addedLowStock": "{count} Artikel aus dem Vorrat ergänzt.",
+  "clearDone": "Erledigte entfernen",
+  "empty": "Die Liste ist leer.",
+  "error.retry": "Das hat nicht geklappt. Bitte erneut versuchen.",
+  "savedOffline": "Offline gespeichert. Wird synchronisiert, sobald du wieder online bist.",
+  "entry.done": "{title} erledigt",
+  "entry.fromPantry": "Vorrat",
+  "form.title": "Hinzufügen",
+  "form.item": "Artikel",
+  "form.quantity": "Menge",
+  "form.submit": "Auf die Liste"
+}

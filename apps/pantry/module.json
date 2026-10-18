@@ -1,34 +1,65 @@
 {
   "name": "pantry",
-  "title": "Vorrat",
+  "title": "Pantry",
   "description": "Household supplies with a minimum stock level per item.",
-  "tables": ["items"],
+  "tables": [
+    "items"
+  ],
   "exports": {
     "listLowStock": "Items whose quantity is below their minimum, with the missing amount."
   },
   "offline": {
-    "routes": ["/pantry"],
+    "routes": [
+      "/pantry"
+    ],
     "strategy": "network-first",
     "offlineWrites": "none"
   },
   "functions": [
     {
       "name": "listItems",
-      "reads": ["items.id", "items.name", "items.unit", "items.quantity", "items.min_quantity"]
+      "reads": [
+        "items.id",
+        "items.name",
+        "items.unit",
+        "items.quantity",
+        "items.min_quantity"
+      ]
     },
     {
       "name": "addItem",
-      "reads": ["items.id"],
-      "writes": ["items.name", "items.unit", "items.quantity", "items.min_quantity", "items.updated_by"]
+      "reads": [
+        "items.id"
+      ],
+      "writes": [
+        "items.name",
+        "items.unit",
+        "items.quantity",
+        "items.min_quantity",
+        "items.updated_by"
+      ]
     },
     {
       "name": "adjustQuantity",
-      "reads": ["items.id", "items.quantity"],
-      "writes": ["items.quantity", "items.updated_by", "items.updated_at"]
+      "reads": [
+        "items.id",
+        "items.quantity"
+      ],
+      "writes": [
+        "items.quantity",
+        "items.updated_by",
+        "items.updated_at"
+      ]
     },
     {
       "name": "listLowStock",
-      "reads": ["items.id", "items.name", "items.unit", "items.quantity", "items.min_quantity"]
+      "reads": [
+        "items.id",
+        "items.name",
+        "items.unit",
+        "items.quantity",
+        "items.min_quantity"
+      ]
     }
   ]
 }

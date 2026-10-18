@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { callFn } from "@homegrown/core/client";
+import { callFn, translator, type Messages } from "@homegrown/core/client";
 import { Badge, Button, Card, Columns, EmptyState, Input, Notice } from "@homegrown/ui";
 import type { Item } from "./functions";
 
-export function PantryView({ initial }: { initial: Item[] }) {
+export function PantryView({ initial, messages }: { initial: Item[]; messages: Messages }) {
+  const t = translator(messages);
   const [items, setItems] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -17,11 +18,7 @@ export function PantryView({ initial }: { initial: Item[] }) {
       await callFn("pantry", fn, input);
       setItems(await callFn<Item[]>("pantry", "listItems"));
     } catch {
-      setError(
-        navigator.onLine
-          ? "Das hat nicht geklappt. Bitte erneut versuchen."
-          : "Offline: Änderungen am Vorrat sind erst wieder online möglich.",
-      );
+      setError(t(navigator.onLine ? "error.retry" : "error.offline"));
     } finally {
       setBusy(false);
     }
@@ -46,7 +43,7 @@ export function PantryView({ initial }: { initial: Item[] }) {
         <Card>
           {error && <Notice tone="danger">{error}</Notice>}
           {items.length === 0 ? (
-            <EmptyState>Der Vorrat ist leer. Lege rechts den ersten Artikel an.</EmptyState>
+            <EmptyState>{t("empty")}</EmptyState>
           ) : (
             <ul className="divide-y divide-border" data-testid="pantry-items">
               {items.map((item) => (
@@ -54,14 +51,14 @@ export function PantryView({ initial }: { initial: Item[] }) {
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{item.name}</p>
                     <p className="text-sm text-fg-muted">
-                      {item.quantity} {item.unit} · Minimum {item.min_quantity}
+                      {t("item.stock", { quantity: item.quantity, unit: item.unit ?? t("unit.pieces"), min: item.min_quantity })}
                     </p>
                   </div>
-                  {item.quantity < item.min_quantity && <Badge tone="warn">knapp</Badge>}
+                  {item.quantity < item.min_quantity && <Badge tone="warn">{t("item.low")}</Badge>}
                   <div className="flex gap-2">
                     <Button
                       variant="secondary"
-                      aria-label={`${item.name} verringern`}
+                      aria-label={t("item.decrease", { name: item.name })}
                       disabled={busy}
                       onClick={() => run("adjustQuantity", { id: item.id, delta: -1 })}
                     >
@@ -69,7 +66,7 @@ export function PantryView({ initial }: { initial: Item[] }) {
                     </Button>
                     <Button
                       variant="secondary"
-                      aria-label={`${item.name} erhöhen`}
+                      aria-label={t("item.increase", { name: item.name })}
                       disabled={busy}
                       onClick={() => run("adjustQuantity", { id: item.id, delta: 1 })}
                     >
@@ -84,14 +81,14 @@ export function PantryView({ initial }: { initial: Item[] }) {
       }
       aside={
         <Card>
-          <h2 className="mb-3 font-semibold">Neuer Artikel</h2>
+          <h2 className="mb-3 font-semibold">{t("form.title")}</h2>
           <form onSubmit={add} className="grid grid-cols-2 gap-3">
-            <Input label="Name" name="name" required maxLength={80} className="col-span-2" />
-            <Input label="Einheit" name="unit" placeholder="Stück" maxLength={20} className="col-span-2" />
-            <Input label="Bestand" name="quantity" type="number" min={0} defaultValue={0} />
-            <Input label="Minimum" name="minQuantity" type="number" min={0} defaultValue={1} />
+            <Input label={t("form.name")} name="name" required maxLength={80} className="col-span-2" />
+            <Input label={t("form.unit")} name="unit" placeholder={t("form.unitPlaceholder")} maxLength={20} className="col-span-2" />
+            <Input label={t("form.quantity")} name="quantity" type="number" min={0} defaultValue={0} />
+            <Input label={t("form.min")} name="minQuantity" type="number" min={0} defaultValue={1} />
             <Button disabled={busy} className="col-span-2">
-              Hinzufügen
+              {t("form.submit")}
             </Button>
           </form>
         </Card>

@@ -1,39 +1,77 @@
 {
   "name": "shopping-list",
-  "title": "Einkaufsliste",
+  "title": "Shopping list",
   "description": "Shared shopping list; can pull everything the pantry is low on.",
-  "tables": ["entries"],
+  "tables": [
+    "entries"
+  ],
   "exports": {},
   "offline": {
-    "routes": ["/shopping-list"],
+    "routes": [
+      "/shopping-list"
+    ],
     "strategy": "network-first",
     "offlineWrites": "queue"
   },
   "functions": [
     {
       "name": "listEntries",
-      "reads": ["entries.id", "entries.title", "entries.quantity", "entries.unit", "entries.done", "entries.source", "entries.created_at"]
+      "reads": [
+        "entries.id",
+        "entries.title",
+        "entries.quantity",
+        "entries.unit",
+        "entries.done",
+        "entries.source",
+        "entries.created_at"
+      ]
     },
     {
       "name": "addEntry",
-      "reads": ["entries.id"],
-      "writes": ["entries.title", "entries.quantity", "entries.unit", "entries.added_by"]
+      "reads": [
+        "entries.id"
+      ],
+      "writes": [
+        "entries.title",
+        "entries.quantity",
+        "entries.unit",
+        "entries.added_by"
+      ]
     },
     {
       "name": "setDone",
-      "reads": ["entries.id"],
-      "writes": ["entries.done"]
+      "reads": [
+        "entries.id"
+      ],
+      "writes": [
+        "entries.done"
+      ]
     },
     {
       "name": "clearDone",
-      "reads": ["entries.done"],
-      "writes": ["entries.*"]
+      "reads": [
+        "entries.done"
+      ],
+      "writes": [
+        "entries.*"
+      ]
     },
     {
       "name": "addLowStock",
-      "reads": ["entries.title", "entries.done"],
-      "writes": ["entries.title", "entries.quantity", "entries.unit", "entries.source", "entries.added_by"],
-      "calls": ["pantry.listLowStock"]
+      "reads": [
+        "entries.title",
+        "entries.done"
+      ],
+      "writes": [
+        "entries.title",
+        "entries.quantity",
+        "entries.unit",
+        "entries.source",
+        "entries.added_by"
+      ],
+      "calls": [
+        "pantry.listLowStock"
+      ]
     }
   ]
 }

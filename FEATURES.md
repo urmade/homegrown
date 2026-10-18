@@ -2,7 +2,7 @@
 
 # Features
 
-## Vorrat (`pantry`)
+## Pantry (`pantry`)
 
 Household supplies with a minimum stock level per item.
 
@@ -11,7 +11,7 @@ Household supplies with a minimum stock level per item.
 - Calls: none
 - Offline: network-first, writes none
 
-## Einkaufsliste (`shopping-list`)
+## Shopping list (`shopping-list`)
 
 Shared shopping list; can pull everything the pantry is low on.
 

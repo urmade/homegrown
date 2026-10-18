@@ -1,0 +1,19 @@
+{
+  "title": "Pantry",
+  "description": "What's at home and what needs restocking.",
+  "empty": "The pantry is empty. Add the first item on the right.",
+  "error.retry": "That didn't work. Please try again.",
+  "error.offline": "Offline: pantry changes are only possible once you're back online.",
+  "item.stock": "{quantity} {unit} · minimum {min}",
+  "item.low": "low",
+  "unit.pieces": "pcs",
+  "item.decrease": "Decrease {name}",
+  "item.increase": "Increase {name}",
+  "form.title": "New item",
+  "form.name": "Name",
+  "form.unit": "Unit",
+  "form.unitPlaceholder": "pcs",
+  "form.quantity": "In stock",
+  "form.min": "Minimum",
+  "form.submit": "Add"
+}

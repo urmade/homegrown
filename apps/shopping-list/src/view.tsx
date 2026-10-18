@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { callFn } from "@homegrown/core/client";
+import { callFn, translator, type Messages } from "@homegrown/core/client";
 import { Badge, Button, Card, Columns, EmptyState, Input, Notice } from "@homegrown/ui";
 import type { Entry } from "./functions";
 
-export function ShoppingView({ initial }: { initial: Entry[] }) {
+export function ShoppingView({ initial, messages }: { initial: Entry[]; messages: Messages }) {
+  const t = translator(messages);
   const [entries, setEntries] = useState(initial);
   const [notice, setNotice] = useState<{ text: string; tone: "neutral" | "danger" } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -21,9 +22,9 @@ export function ShoppingView({ initial }: { initial: Entry[] }) {
       if (success) setNotice({ text: success(out), tone: "neutral" });
     } catch {
       if (navigator.onLine) {
-        setNotice({ text: "Das hat nicht geklappt. Bitte erneut versuchen.", tone: "danger" });
+        setNotice({ text: t("error.retry"), tone: "danger" });
         setEntries(await callFn<Entry[]>("shopping-list", "listEntries").catch(() => entries));
-      } else setNotice({ text: "Offline gespeichert. Wird synchronisiert, sobald du wieder online bist.", tone: "neutral" });
+      } else setNotice({ text: t("savedOffline"), tone: "neutral" });
     } finally {
       setBusy(false);
     }
@@ -49,7 +50,7 @@ export function ShoppingView({ initial }: { initial: Entry[] }) {
       main={
         <Card>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-semibold">{open} offen</h2>
+            <h2 className="font-semibold">{t("open", { count: open })}</h2>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="secondary"
@@ -59,20 +60,20 @@ export function ShoppingView({ initial }: { initial: Entry[] }) {
                     "addLowStock",
                     {},
                     (l) => l,
-                    (out) => `${(out as { added: number }).added} Artikel aus dem Vorrat ergänzt.`,
+                    (out) => t("addedLowStock", { count: (out as { added: number }).added }),
                   )
                 }
               >
-                Aus Vorrat ergänzen
+                {t("addLowStock")}
               </Button>
               <Button variant="ghost" disabled={busy} onClick={() => run("clearDone", {}, (l) => l.filter((e) => !e.done))}>
-                Erledigte entfernen
+                {t("clearDone")}
               </Button>
             </div>
           </div>
           {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
           {entries.length === 0 ? (
-            <EmptyState>Die Liste ist leer.</EmptyState>
+            <EmptyState>{t("empty")}</EmptyState>
           ) : (
             <ul className="divide-y divide-border" data-testid="shopping-entries">
               {entries.map((entry) => (
@@ -80,7 +81,7 @@ export function ShoppingView({ initial }: { initial: Entry[] }) {
                   <input
                     type="checkbox"
                     className="size-5 shrink-0 accent-accent"
-                    aria-label={`${entry.title} erledigt`}
+                    aria-label={t("entry.done", { title: entry.title })}
                     checked={entry.done}
                     disabled={busy || entry.id.startsWith("offline-")}
                     onChange={() =>
@@ -92,7 +93,7 @@ export function ShoppingView({ initial }: { initial: Entry[] }) {
                   <span className={`min-w-0 flex-1 break-words ${entry.done ? "text-fg-muted line-through" : ""}`}>
                     {entry.quantity} {entry.unit ?? "×"} {entry.title}
                   </span>
-                  {entry.source === "pantry" && <Badge tone="accent">Vorrat</Badge>}
+                  {entry.source === "pantry" && <Badge tone="accent">{t("entry.fromPantry")}</Badge>}
                 </li>
               ))}
             </ul>
@@ -101,12 +102,12 @@ export function ShoppingView({ initial }: { initial: Entry[] }) {
       }
       aside={
         <Card>
-          <h2 className="mb-3 font-semibold">Hinzufügen</h2>
+          <h2 className="mb-3 font-semibold">{t("form.title")}</h2>
           <form onSubmit={add} className="grid grid-cols-3 gap-3">
-            <Input label="Artikel" name="title" required maxLength={80} className="col-span-2" />
-            <Input label="Menge" name="quantity" type="number" min={1} defaultValue={1} />
+            <Input label={t("form.item")} name="title" required maxLength={80} className="col-span-2" />
+            <Input label={t("form.quantity")} name="quantity" type="number" min={1} defaultValue={1} />
             <Button disabled={busy} className="col-span-3">
-              Auf die Liste
+              {t("form.submit")}
             </Button>
           </form>
         </Card>

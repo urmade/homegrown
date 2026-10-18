@@ -4,7 +4,7 @@ export interface DB {
   "pantry.items": {
     id: Generated<string>;
     name: string;
-    unit: Generated<string>;
+    unit: string | null;
     quantity: Generated<number>;
     min_quantity: Generated<number>;
     updated_by: string | null;
