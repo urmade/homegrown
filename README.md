@@ -19,7 +19,7 @@ Pull-based deploys (no inbound API): set `GITHUB_REPO` and `GITHUB_TOKEN` in `.e
 docker compose --profile deploy up -d deploy-agent
 ```
 
-The deploy agent polls `main` every 60 s, deploys only SHAs whose checks are green, honours the pause switch on `/admin`, rehearses migrations on staging restored from the latest dump, dumps before promote, smoke-tests `/health`, and rolls back on red, pushes a `revert/<sha>` branch with a revert PR, and posts the error logs to the PR. Nightly: whole-DB dump (logs excluded), rotation (7 daily, 4 weekly), 14-day log retention. Backups go to `HG_BACKUP_DIR`; point that at your sync target.
+The deploy agent polls `main` every 60 s, deploys only SHAs whose latest `ci` run is green, honours the pause switch on `/admin`, rehearses migrations on staging restored from the latest dump, dumps before promote, smoke-tests `/health`, and rolls back on red, pushes a `revert/<sha>` branch with a revert PR, and posts the error logs to the PR. Nightly: whole-DB dump (logs excluded), rotation (7 daily, 4 weekly), 14-day log retention. Backups go to `HG_BACKUP_DIR`; point that at your sync target.
 
 ## Layout
 

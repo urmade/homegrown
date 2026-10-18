@@ -7,17 +7,19 @@ const backups = mkdtempSync(join(tmpdir(), "hg-backups-"));
 process.env.HG_BACKUPS = backups;
 process.env.GITHUB_REPO = "household/homegrown";
 process.env.GITHUB_TOKEN = "test-token";
-const { deploy } = await import("../src/agent");
+const { deploy, isGreen } = await import("../src/agent");
 
 const SHA = "abc1234def5678";
 const PREV = "0001111222333";
 
-function fakeIO(prodHealthy: boolean) {
+function fakeIO(prodHealthy: boolean, stagingFails = false) {
   const calls = { git: [] as string[][], compose: [] as string[][], sql: [] as { text: string; params?: unknown[] }[], github: [] as { path: string; body?: string }[], dumps: [] as string[] };
   const io = {
     git: (...args: string[]) => {
       calls.git.push(args);
-      return args[0] === "rev-list" ? `${args.at(-1)} parent1 parent2` : "";
+      if (args[0] === "rev-list") return `${args.at(-1)} parent1 parent2`;
+      if (args[0] === "ls-tree") return "apps/pantry/migrations/0001_items.sql\napps/pantry/module.json\ncore/migrations/0001_core.sql";
+      return "";
     },
     compose: (tag: string, ...args: string[]) => {
       calls.compose.push([tag, ...args]);
@@ -36,7 +38,9 @@ function fakeIO(prodHealthy: boolean) {
       calls.dumps.push(label);
       return `${label}.dump`;
     },
-    rehearse: async () => {},
+    rehearse: async () => {
+      if (stagingFails) throw new Error("staging smoke failed");
+    },
   };
   return { io, calls };
 }
@@ -67,7 +71,8 @@ describe("deploy agent", () => {
     expect(rollback).toBeGreaterThan(promote);
 
     const revert = calls.git.find((a) => a.includes("revert"));
-    expect(revert).toEqual(expect.arrayContaining(["revert", "--no-edit", "-m", "1", SHA]));
+    expect(revert).toEqual(["revert", "--no-commit", "-m", "1", SHA]);
+    expect(calls.git).toContainEqual(["checkout", SHA, "--", "apps/pantry/migrations/0001_items.sql", "core/migrations/0001_core.sql"]);
     expect(calls.git).toContainEqual(["push", "--quiet", "https://x-access-token:test-token@github.com/household/homegrown.git", "HEAD:refs/heads/revert/fff9999"]);
     expect(calls.github.find((g) => g.path === "/pulls" && g.body)?.body).toContain('"head":"revert/fff9999"');
 
@@ -77,5 +82,29 @@ describe("deploy agent", () => {
     expect(comment?.body).toContain("boom in pantry.listItems");
     expect(calls.github).toContainEqual(expect.objectContaining({ path: `/statuses/${SHA}`, body: expect.stringContaining('"state":"failure"') }));
     expect(existsSync(join(backups, ".deployed")) ? readFileSync(join(backups, ".deployed"), "utf8") : null).toBe(stateBefore);
+  });
+
+  it("deploy.staging-revert a failed staging rehearsal leaves prod untouched and pushes a revert of the merge", async () => {
+    const SHA = "eee5555ddd";
+    const { io, calls } = fakeIO(true, true);
+    expect(await deploy(SHA, PREV, io)).toBe(false);
+    expect(calls.compose.some((c) => c.includes("up"))).toBe(false);
+    expect(calls.dumps).toEqual([]);
+    expect(calls.git).toContainEqual(["push", "--quiet", "https://x-access-token:test-token@github.com/household/homegrown.git", "HEAD:refs/heads/revert/eee5555"]);
+    const event = calls.sql.find((q) => q.params?.[0] === "staging_failed");
+    expect(event?.params?.[2]).toMatchObject({ revert: "revert/eee5555" });
+  });
+
+  it("deploy.green-rule only the latest started ci.yml run decides; red, pending and missing are not green", async () => {
+    const runs = (...r: [string, string | null, string][]) => async () => ({
+      workflow_runs: r.map(([status, conclusion, run_started_at]) => ({ status, conclusion, run_started_at, created_at: run_started_at })),
+    });
+    expect(await isGreen("s", runs(["completed", "success", "2026-01-01T10:00:00Z"]))).toBe(true);
+    expect(await isGreen("s", runs(["completed", "failure", "2026-01-01T10:00:00Z"]))).toBe(false);
+    expect(await isGreen("s", runs(["in_progress", null, "2026-01-01T10:00:00Z"]))).toBe(false);
+    expect(await isGreen("s", runs())).toBe(false);
+    expect(await isGreen("s", async () => null)).toBe(false);
+    expect(await isGreen("s", runs(["completed", "failure", "2026-01-01T10:00:00Z"], ["completed", "success", "2026-01-01T11:00:00Z"]))).toBe(true);
+    expect(await isGreen("s", runs(["completed", "success", "2026-01-01T10:00:00Z"], ["completed", "cancelled", "2026-01-01T11:00:00Z"]))).toBe(false);
   });
 });
