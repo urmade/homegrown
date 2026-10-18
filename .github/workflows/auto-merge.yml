@@ -1,6 +1,6 @@
 name: auto-merge
 
-# Non-harness PRs merge themselves once required checks pass. Harness PRs wait for CODEOWNERS review.
+# Non-harness PRs merge themselves. Harness PRs wait for CODEOWNERS review.
 # Drafts are ignored. pull_request only; GITHUB_TOKEN only.
 on:
   pull_request:
@@ -9,6 +9,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 
 jobs:
   enable:
@@ -27,3 +28,15 @@ jobs:
       - if: steps.scope.outputs.harness != 'true'
         env: { GH_TOKEN: "${{ github.token }}" }
         run: gh pr merge ${{ github.event.pull_request.number }} --auto --squash
+      # A GITHUB_TOKEN merge starts no push run on main; workflow_dispatch is the one event GITHUB_TOKEN may start.
+      - name: run CI on main for the merged SHA
+        if: steps.scope.outputs.harness != 'true' && github.base_ref == 'main'
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          state=$(gh pr view ${{ github.event.pull_request.number }} --json state --jq .state)
+          if [ "$state" = "MERGED" ]; then
+            gh workflow run ci.yml --ref main
+            echo "dispatched ci on main at $(gh pr view ${{ github.event.pull_request.number }} --json mergeCommit --jq .mergeCommit.oid)"
+          else
+            echo "PR is $state (auto-merge queued); no dispatch"
+          fi

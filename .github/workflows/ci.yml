@@ -5,13 +5,17 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Merges made by the auto-merge workflow push with GITHUB_TOKEN, which never starts push runs;
+  # it dispatches this workflow on main instead so the merged SHA gets the check runs the deploy agent requires.
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel on main: every merged SHA needs complete check runs before the deploy agent ships it.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   NEXT_TELEMETRY_DISABLED: "1"
