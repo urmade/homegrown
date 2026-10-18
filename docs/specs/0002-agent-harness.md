@@ -8,6 +8,10 @@ Root AGENTS.md, rules, skills, reviewer, hooks, CI gates and CODEOWNERS (Agent H
 - [core.pwa.never-cache] check-pwa fails if admin, logs, auth or health responses are cached.
 - [core.i18n.first-setup] A fresh install asks for the household language first; English is the default (e2e global setup picks it through the real flow).
 - [core.i18n.member-override] A member can switch their own language without changing the household's.
+- [harness.merge-gate.green] Auto-merge merges only after every required CI check (static, db, e2e, docker-arm64) on the head SHA succeeded.
+- [harness.merge-gate.red] A failed or cancelled required check blocks the merge.
+- [harness.merge-gate.pending-missing] Pending or missing checks are waited for and never merged on; the gate times out without merging.
+- [harness.merge-gate.latest] Only the newest run of each check counts.
 - [deploy.rollback-after-promote] The full test suite includes the deploy agent's rollback-after-promote test.
 
 Offline: no new routes.

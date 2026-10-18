@@ -1,6 +1,7 @@
 name: auto-merge
 
-# Non-harness PRs merge themselves. Harness PRs wait for CODEOWNERS review.
+# Non-harness PRs merge themselves once every required CI check on their head SHA is green (merge-gate.sh).
+# A new push cancels the waiting run and starts over. Harness PRs wait for CODEOWNERS review.
 # Drafts are ignored. pull_request only; GITHUB_TOKEN only.
 on:
   pull_request:
@@ -10,11 +11,17 @@ permissions:
   contents: write
   pull-requests: write
   actions: write
+  checks: read
+
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   enable:
     if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
@@ -25,18 +32,20 @@ jobs:
           if grep -qE '^(AGENTS\.md|harness\.lock\.json|\.cursor/(rules|skills|agents|hooks)/|\.cursor/hooks\.json|\.github/|tools/harness/)' changed.txt; then
             echo "harness=true" >> "$GITHUB_OUTPUT"
           fi
-      - if: steps.scope.outputs.harness != 'true'
+      - name: wait for required checks
+        id: gate
+        if: steps.scope.outputs.harness != 'true'
         env: { GH_TOKEN: "${{ github.token }}" }
-        run: gh pr merge ${{ github.event.pull_request.number }} --auto --squash
+        run: bash tools/harness/merge-gate.sh ${{ github.event.pull_request.head.sha }}
+      # --match-head-commit: if anything was pushed after the gated SHA, GitHub refuses the merge.
+      - name: merge
+        if: steps.scope.outputs.harness != 'true' && steps.gate.outcome == 'success'
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh pr merge ${{ github.event.pull_request.number }} --squash --match-head-commit ${{ github.event.pull_request.head.sha }}
       # A GITHUB_TOKEN merge starts no push run on main; workflow_dispatch is the one event GITHUB_TOKEN may start.
       - name: run CI on main for the merged SHA
-        if: steps.scope.outputs.harness != 'true' && github.base_ref == 'main'
+        if: steps.scope.outputs.harness != 'true' && steps.gate.outcome == 'success' && github.base_ref == 'main'
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
-          state=$(gh pr view ${{ github.event.pull_request.number }} --json state --jq .state)
-          if [ "$state" = "MERGED" ]; then
-            gh workflow run ci.yml --ref main
-            echo "dispatched ci on main at $(gh pr view ${{ github.event.pull_request.number }} --json mergeCommit --jq .mergeCommit.oid)"
-          else
-            echo "PR is $state (auto-merge queued); no dispatch"
-          fi
+          gh workflow run ci.yml --ref main
+          echo "dispatched ci on main at $(gh pr view ${{ github.event.pull_request.number }} --json mergeCommit --jq .mergeCommit.oid)"
