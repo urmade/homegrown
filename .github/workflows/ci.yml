@@ -160,3 +160,14 @@ jobs:
       - name: post drift comment
         env: { GH_TOKEN: "${{ github.token }}" }
         run: gh pr comment ${{ github.event.pull_request.number }} --body-file artifacts/drift.md --edit-last --create-if-none || echo "comment skipped (read-only token)"
+
+  # Runs started by GITHUB_TOKEN (auto-merge's dispatches) fire no workflow_run event, so hand back explicitly.
+  hand-off:
+    if: always() && github.event_name == 'workflow_dispatch'
+    needs: [static, db, e2e, docker-arm64]
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+    steps:
+      - env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh workflow run auto-merge.yml --repo "${{ github.repository }}" -f wait_run=${{ github.run_id }} || echo "auto-merge dispatch failed; the scheduled sweep will pick this up"
