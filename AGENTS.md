@@ -3,7 +3,7 @@
 Self-hosted household PWA on a home NAS (Docker, Postgres, single tenant). Agents build features; CI, branch
 protection and the database enforce the rules. No human reads feature PRs. Simple, strict, rollback-able.
 
-This file is a map. Anything checkable is a CI gate; when prose and a check disagree, the check wins.
+This file is a map (demo edit). Anything checkable is a CI gate; when prose and a check disagree, the check wins.
 
 ## Precedence
 
