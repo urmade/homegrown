@@ -5,3 +5,4 @@ alwaysApply: true
 
 - No abstraction until a second real caller; smallest change that works (plan review, knip, jscpd, reviewer).
 - Plan before code: every new table, module, dependency or cross-module call states why nothing existing works (check-plan).
+- Fix the flow, not the symptom: before any fix, enumerate all failure modes of the end-to-end flow touched and address them in one change (check-plan, plan review).

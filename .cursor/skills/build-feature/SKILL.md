@@ -22,10 +22,12 @@ Offline: what works offline; do writes queue (last write wins) or not.
 ## Plan
 - Touched modules, tables, reused capabilities.
 - New `thing`: why nothing existing works (one line each, the name in backticks).
+- Failure modes of <end-to-end flow touched>:
+  - <how it can fail>: <how this change handles it, or why it is out of scope>
 ## Assumptions
 ```
 
-`check-plan` fails if a new dependency, module, table or call has no backticked line with a reason. `check-evidence` fails if a criterion has no `[test.id]` or no matching test.
+Fix the flow, not the symptom: walk the whole flow (input, empty, error, offline, permissions, cross-module calls), list every failure mode, and address them in this one change. `check-plan` fails if a changed spec lists fewer than two failure modes, or if a new dependency, module, table or call has no backticked line with a reason. `check-evidence` fails if a criterion has no `[test.id]` or no matching test.
 
 ## 2. Plan review
 

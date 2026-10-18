@@ -12,6 +12,6 @@ description: Weekly scheduled run from the intake bot. Find dead code, unused ca
 
 Rules:
 
-- One concern per PR, each with a short spec (criteria: existing tests still pass; plan: what goes and why it is unused).
+- One concern per PR, each with a short spec (criteria: existing tests still pass; plan: what goes, why it is unused, and failure modes of removing it).
 - Removing tables or columns follows `migration-expand-contract` (7-day grace). Deprecate this week, drop in a later run.
 - Never remove a test that still covers live behaviour.
