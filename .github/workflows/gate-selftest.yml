@@ -8,6 +8,10 @@ permissions:
   contents: read
   checks: read
 
+concurrency:
+  group: gate-selftest-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   gate:
     runs-on: ubuntu-24.04
