@@ -32,8 +32,12 @@
       ]
     },
     "packages/deploy-agent": {
+      "entry": [
+        "tests/*.test.ts"
+      ],
       "project": [
-        "src/**/*.ts"
+        "src/**/*.ts",
+        "tests/**/*.ts"
       ]
     },
     "apps/web": {

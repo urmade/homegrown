@@ -9,4 +9,4 @@ alwaysApply: true
 - All DB access via ctx.db; no raw database clients in modules (lint, check-data-flow).
 - Identity via ctx.auth.currentMember() (lint).
 - No real household data or secrets anywhere, incl. PR bodies and run records (check-secrets).
-- UI copy de-DE; code, docs, commits English (reviewer).
+- Code, docs and commits in English; UI copy only via catalogs (see i18n rule).

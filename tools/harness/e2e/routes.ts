@@ -4,7 +4,7 @@ import { loadManifests } from "../../../core/src/manifest";
 
 const mods = loadManifests();
 
-export const routes = ["/", "/offline", "/admin", "/admin/logs", "/admin/data-flow", ...mods.map((m) => `/${m.manifest.name}`)];
+export const routes = ["/", "/offline", "/setup", "/settings", "/admin", "/admin/logs", "/admin/data-flow", ...mods.map((m) => `/${m.manifest.name}`)];
 
 export const offlineRoutes = mods.flatMap((m) => m.manifest.offline?.routes ?? []);
 

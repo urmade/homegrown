@@ -14,7 +14,7 @@ try {
 
 const { modules } = await import("../../.homegrown/registry.server");
 for (const { dir, manifest } of mods) {
-  for (const f of ["MODULE.md", "AGENTS.md", "package.json", "src/functions.ts", "migrations"])
+  for (const f of ["MODULE.md", "AGENTS.md", "package.json", "src/functions.ts", "migrations", "messages/en.json"])
     if (!existsSync(join(dir, f))) fail(`apps/${manifest.name}: missing ${f}`);
   const tests = existsSync(join(dir, "tests")) ? readdirSync(join(dir, "tests")).filter((f) => /\.(test|spec)\.tsx?$/.test(f)) : [];
   if (tests.length === 0) fail(`apps/${manifest.name}: needs at least one test in tests/`);

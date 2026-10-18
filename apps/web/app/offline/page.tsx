@@ -1,10 +1,12 @@
 import { EmptyState, PageHeader } from "@homegrown/ui";
+import { getT } from "../../lib/server";
 
-export default function Offline() {
+export default async function Offline() {
+  const t = await getT("core");
   return (
     <>
-      <PageHeader title="Offline" />
-      <EmptyState>Diese Seite ist offline nicht verfügbar. Sobald du wieder verbunden bist, lädt sie wieder.</EmptyState>
+      <PageHeader title={t("offline.title")} />
+      <EmptyState>{t("offline.body")}</EmptyState>
     </>
   );
 }

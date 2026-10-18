@@ -12,7 +12,7 @@ function files(dir: string, re: RegExp): string[] {
   });
 }
 
-const tests = [...files("apps", /\.(test|spec)\.tsx?$/), ...files("core", /\.test\.ts$/), ...files("tools/harness", /\.(test|spec)\.ts$/)]
+const tests = [...files("apps", /\.(test|spec)\.tsx?$/), ...files("core", /\.test\.ts$/), ...files("packages", /\.test\.ts$/), ...files("tools/harness", /\.(test|spec)\.ts$/)]
   .map(read)
   .join("\n");
 

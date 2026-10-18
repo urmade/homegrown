@@ -39,11 +39,12 @@ Follow `.cursor/skills/vendor-superpowers/test-driven-development/SKILL.md`. Tes
 - Schema change: `migration-expand-contract`. New module: `new-module`. New cross-module call: `add-capability`.
 - Update `module.json` reads/writes/calls with the code; the recorder fails tests on undeclared access.
 - UI from `@homegrown/ui`; deviations only via `ui-override`.
+- No literal UI text: add keys to `messages/en.json` and `messages/de.json`, render with `t("key")`. E2e tests assert on English copy.
 
 ## 4. Verify locally
 
 ```sh
-pnpm gen && pnpm typecheck && pnpm lint && pnpm test
+pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm exec tsx tools/harness/check-i18n.ts
 pnpm gen:data-flow && pnpm gen:docs && pnpm build && pnpm e2e
 ```
 

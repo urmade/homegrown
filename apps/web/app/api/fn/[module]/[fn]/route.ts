@@ -15,7 +15,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ module:
       return Response.json(await invoke(module, fn, input));
     } catch (e) {
       if (e instanceof InputError) return Response.json({ error: e.message, correlationId }, { status: 400 });
-      return Response.json({ error: "Interner Fehler", correlationId }, { status: 500 });
+      return Response.json({ error: "internal error", correlationId }, { status: 500 });
     }
   });
 }

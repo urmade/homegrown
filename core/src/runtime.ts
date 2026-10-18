@@ -3,6 +3,7 @@ import type { z } from "zod";
 import { withContext, currentContext } from "./context";
 import { AccessRecorder, baseDb } from "./db";
 import { log, errorData, type Logger } from "./log";
+import type { Catalogs } from "./i18n";
 import { roleOf, type ModuleManifest } from "./manifest";
 
 export type Member = { id: string; displayName: string };
@@ -34,7 +35,7 @@ export type ClientOf<F, K extends keyof F> = {
   [P in K]: F[P] extends ModuleFn<infer I, infer O> ? (input: z.input<I>) => Promise<z.output<O>> : never;
 };
 
-export type RegisteredModule = { manifest: ModuleManifest; functions: Record<string, unknown> };
+export type RegisteredModule = { manifest: ModuleManifest; functions: Record<string, unknown>; messages?: Catalogs };
 
 const registry = new Map<string, RegisteredModule>();
 
