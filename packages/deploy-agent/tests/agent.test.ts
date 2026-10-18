@@ -10,15 +10,14 @@ process.env.GITHUB_TOKEN = "test-token";
 const { deploy, isGreen } = await import("../src/agent");
 
 const SHA = "abc1234def5678";
-const PREV = "0001111222333";
+const PREV = "0001111222333444555666777888999aaabbbccc";
 
 function fakeIO(prodHealthy: boolean, stagingFails = false) {
   const calls = { git: [] as string[][], compose: [] as string[][], sql: [] as { text: string; params?: unknown[] }[], github: [] as { path: string; body?: string }[], dumps: [] as string[] };
   const io = {
     git: (...args: string[]) => {
       calls.git.push(args);
-      if (args[0] === "rev-list") return `${args.at(-1)} parent1 parent2`;
-      if (args[0] === "ls-tree") return "apps/pantry/migrations/0001_items.sql\napps/pantry/module.json\ncore/migrations/0001_core.sql";
+      if (args[0] === "diff") return "diff --git a/x b/x";
       return "";
     },
     compose: (tag: string, ...args: string[]) => {
@@ -70,9 +69,10 @@ describe("deploy agent", () => {
     expect(promote).toBeGreaterThan(-1);
     expect(rollback).toBeGreaterThan(promote);
 
-    const revert = calls.git.find((a) => a.includes("revert"));
-    expect(revert).toEqual(["revert", "--no-commit", "-m", "1", SHA]);
-    expect(calls.git).toContainEqual(["checkout", SHA, "--", "apps/pantry/migrations/0001_items.sql", "core/migrations/0001_core.sql"]);
+    // The whole undeployed range is reverted on top of current main, migrations excluded.
+    expect(calls.git).toContainEqual(["checkout", "--quiet", "--detach", "origin/main"]);
+    expect(calls.git).toContainEqual(["diff", "--binary", SHA, PREV, "--", ".", ":(exclude,glob)**/migrations/**"]);
+    expect(calls.git.find((a) => a[0] === "apply")?.slice(0, 3)).toEqual(["apply", "--index", "--3way"]);
     expect(calls.git).toContainEqual(["push", "--quiet", "https://x-access-token:test-token@github.com/household/homegrown.git", "HEAD:refs/heads/revert/fff9999"]);
     expect(calls.github.find((g) => g.path === "/pulls" && g.body)?.body).toContain('"head":"revert/fff9999"');
 

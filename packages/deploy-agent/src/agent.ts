@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import pg from "pg";
@@ -84,34 +85,37 @@ async function report(x: IO, sha: string, ok: boolean, text: string) {
 }
 
 /**
- * Reverts the red commit on top of current main and pushes it as revert/<sha>. With GitHub configured it
- * opens a PR, which auto-merges on green like any non-harness change; main is never pushed to directly.
+ * Reverts everything deployed-but-red (prev..sha, so several merges since the last good deploy are all undone) as one
+ * commit on top of current main, pushed as revert/<sha>. With GitHub configured it opens a PR, which goes through the
+ * normal merge gate; main is never pushed to directly. Returns the branch, or null if it could not be pushed.
  */
-async function revertOnMain(x: IO, sha: string): Promise<string | null> {
+export async function revertOnMain(x: IO, sha: string, prev: string): Promise<string | null> {
   const branch = `revert/${sha.slice(0, 7)}`;
   const remote = env.GITHUB_REPO && env.GITHUB_TOKEN ? `https://x-access-token:${env.GITHUB_TOKEN}@github.com/${env.GITHUB_REPO}.git` : "origin";
+  const base = /^[0-9a-f]{40}$/.test(prev) ? prev : `${sha}^`;
   try {
     x.git("fetch", "--quiet", "origin", "main");
     x.git("checkout", "--quiet", "--detach", "origin/main");
-    const isMerge = x.git("rev-list", "--parents", "-n", "1", sha).split(" ").length > 2;
-    x.git("revert", "--no-commit", ...(isMerge ? ["-m", "1"] : []), sha);
-    // Migrations stay: the schema is already applied and N-1 keeps the previous code compatible with it,
-    // and check-migrations rejects deleting applied migrations, which would leave the revert PR red forever.
-    const migrations = x.git("ls-tree", "-r", "--name-only", sha).split("\n").filter((f) => /(^|\/)migrations\/[^/]+\.sql$/.test(f));
-    if (migrations.length) x.git("checkout", sha, "--", ...migrations);
-    x.git("-c", "user.name=homegrown-deploy-agent", "-c", "user.email=deploy-agent@homegrown.invalid", "commit", "--no-verify", "-m", `Revert ${sha.slice(0, 7)} (red deploy; migrations kept)`);
+    // Migrations stay: the schema is already applied, N-1 keeps the previous code compatible with it, and
+    // check-migrations rejects deleting applied migrations, which would leave the revert PR red forever.
+    const patch = x.git("diff", "--binary", sha, base, "--", ".", ":(exclude,glob)**/migrations/**");
+    if (patch) {
+      const file = join(tmpdir(), `revert-${sha}.patch`);
+      writeFileSync(file, `${patch}\n`);
+      x.git("apply", "--index", "--3way", file);
+    }
+    x.git("-c", "user.name=homegrown-deploy-agent", "-c", "user.email=deploy-agent@homegrown.invalid", "commit", "--no-verify", "--allow-empty", "-m", `Revert ${base.slice(0, 7)}..${sha.slice(0, 7)} (red deploy; migrations kept)`);
     x.git("push", "--quiet", remote, `HEAD:refs/heads/${branch}`);
   } catch (e) {
-    for (const cleanup of [["revert", "--abort"], ["reset", "--hard", "--quiet"]])
-      try {
-        x.git(...cleanup);
-      } catch {}
+    try {
+      x.git("reset", "--hard", "--quiet");
+    } catch {}
     say("revert.failed", { sha, error: String(e).slice(0, 300) });
     return null;
   }
   await x.github("/pulls", {
     method: "POST",
-    body: JSON.stringify({ title: `Revert ${sha.slice(0, 7)}: red deploy`, head: branch, base: "main", body: `The deploy of ${sha} failed (staging rehearsal or prod smoke); prod runs the previous version. This revert keeps migrations and goes through the normal merge gate. Fix forward on a branch.` }),
+    body: JSON.stringify({ title: `Revert ${sha.slice(0, 7)}: red deploy`, head: branch, base: "main", body: `The deploy of ${sha} failed (staging rehearsal or prod smoke); prod runs ${base.slice(0, 7)}. This reverts ${base.slice(0, 7)}..${sha.slice(0, 7)}, keeps migrations, and goes through the normal merge gate. Fix forward on a branch.` }),
   });
   return branch;
 }
@@ -123,7 +127,7 @@ export async function deploy(sha: string, prev: string, x: IO = io): Promise<boo
   try {
     await x.rehearse(sha);
   } catch (e) {
-    const revert = await revertOnMain(x, sha);
+    const revert = await revertOnMain(x, sha, prev);
     await event(x, "staging_failed", sha, { error: String(e).slice(0, 500), revert });
     await report(x, sha, false, `Staging rehearsal failed for ${sha.slice(0, 7)}; prod untouched. ${revert ? `Revert pushed to \`${revert}\`.` : "Revert the merge manually."}`);
     return false;
@@ -140,7 +144,7 @@ export async function deploy(sha: string, prev: string, x: IO = io): Promise<boo
 
   // Red prod: the schema stays (N-1 keeps the previous image compatible), only the image goes back.
   x.compose(prev, "up", "-d", "--no-deps", "app");
-  const revert = await revertOnMain(x, sha);
+  const revert = await revertOnMain(x, sha, prev);
   await event(x, "rollback", sha, { to: prev, revert });
   const errors = await x
     .sql<{ msg: string; error: string | null }>(
@@ -164,13 +168,14 @@ export async function deploy(sha: string, prev: string, x: IO = io): Promise<boo
   return false;
 }
 
-type CiRun = { status: string; conclusion: string | null; run_started_at?: string; created_at: string };
+type CiRun = { status: string; conclusion: string | null; event?: string; triggering_actor?: { login: string }; run_started_at?: string; created_at: string };
+const executed = (r: CiRun) => r.conclusion !== "action_required" && !(r.event === "pull_request" && r.triggering_actor?.login === "github-actions[bot]");
 
 /** Same rule as tools/harness/merge-gate.sh: the most recently started ci.yml run for the SHA completed with success. */
 export async function isGreen(sha: string, gh: IO["github"] = github): Promise<boolean> {
   if (!env.GITHUB_REPO) return env.HG_ALLOW_UNVERIFIED === "1";
   const data = (await gh(`/actions/workflows/ci.yml/runs?head_sha=${sha}&per_page=100`)) as { workflow_runs: CiRun[] } | null;
-  const latest = (data?.workflow_runs ?? []).filter((r) => r.conclusion !== "action_required").sort((a, b) => (a.run_started_at ?? a.created_at).localeCompare(b.run_started_at ?? b.created_at)).at(-1);
+  const latest = (data?.workflow_runs ?? []).filter(executed).sort((a, b) => (a.run_started_at ?? a.created_at).localeCompare(b.run_started_at ?? b.created_at)).at(-1);
   return latest?.status === "completed" && latest.conclusion === "success";
 }
 
@@ -229,19 +234,27 @@ async function nightly() {
 }
 
 // Persisted so a restart never re-deploys a SHA that already failed (and never pushes its revert twice).
+// "<sha> <prev>" per line. Persisted so a restart never re-deploys a SHA that already failed.
 const FAILED = join(BACKUPS, ".failed");
-const failed = new Set(existsSync(FAILED) ? readFileSync(FAILED, "utf8").split("\n").filter(Boolean) : []);
+const failed = new Map<string, string>(
+  (existsSync(FAILED) ? readFileSync(FAILED, "utf8").split("\n").filter(Boolean) : []).map((l) => [l.split(" ")[0]!, l.split(" ")[1] ?? "local"]),
+);
 async function tick() {
   await nightly();
   run("git", ["fetch", "--quiet", "origin", "main"]);
   const sha = run("git", ["rev-parse", "origin/main"]);
   const prev = existsSync(STATE) ? readFileSync(STATE, "utf8").trim() : "local";
-  if (sha === prev || failed.has(sha)) return;
+  if (sha === prev) return;
+  if (failed.has(sha)) {
+    // A revert that could not be pushed (network, auth) is retried until revert/<sha> exists.
+    if (!run("git", ["ls-remote", "--heads", "origin", `revert/${sha.slice(0, 7)}`])) await revertOnMain(io, sha, failed.get(sha)!);
+    return;
+  }
   if (await paused()) return say("deploy.paused", { sha });
   if (!(await isGreen(sha))) return say("deploy.waiting_for_green", { sha });
   if (!(await deploy(sha, prev))) {
-    failed.add(sha);
-    writeFileSync(FAILED, [...failed].join("\n"));
+    failed.set(sha, prev);
+    writeFileSync(FAILED, [...failed].map(([f, p]) => `${f} ${p}`).join("\n"));
   }
 }
 
