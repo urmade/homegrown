@@ -164,13 +164,14 @@ export async function deploy(sha: string, prev: string, x: IO = io): Promise<boo
   return false;
 }
 
-type CiRun = { status: string; conclusion: string | null; run_started_at?: string; created_at: string };
+type CiRun = { status: string; conclusion: string | null; event?: string; triggering_actor?: { login: string }; run_started_at?: string; created_at: string };
+const executed = (r: CiRun) => r.conclusion !== "action_required" && !(r.event === "pull_request" && r.triggering_actor?.login === "github-actions[bot]");
 
 /** Same rule as tools/harness/merge-gate.sh: the most recently started ci.yml run for the SHA completed with success. */
 export async function isGreen(sha: string, gh: IO["github"] = github): Promise<boolean> {
   if (!env.GITHUB_REPO) return env.HG_ALLOW_UNVERIFIED === "1";
   const data = (await gh(`/actions/workflows/ci.yml/runs?head_sha=${sha}&per_page=100`)) as { workflow_runs: CiRun[] } | null;
-  const latest = (data?.workflow_runs ?? []).filter((r) => r.conclusion !== "action_required").sort((a, b) => (a.run_started_at ?? a.created_at).localeCompare(b.run_started_at ?? b.created_at)).at(-1);
+  const latest = (data?.workflow_runs ?? []).filter(executed).sort((a, b) => (a.run_started_at ?? a.created_at).localeCompare(b.run_started_at ?? b.created_at)).at(-1);
   return latest?.status === "completed" && latest.conclusion === "success";
 }
 

@@ -11,7 +11,7 @@ const run = (id: number, conclusion: string | null, started: string, attempt = 1
   created_at: "2026-10-18T09:00:00Z",
 });
 
-const gate = (runs: Run[]) =>
+const gate = (runs: (Run & Record<string, unknown>)[]) =>
   spawnSync("bash", ["tools/harness/merge-gate.sh", "abc123"], {
     env: { ...process.env, CI_RUNS_JSON: JSON.stringify({ workflow_runs: runs }) },
     encoding: "utf8",
@@ -39,5 +39,7 @@ describe("merge gate", () => {
     expect(gate([run(1, "success", "2026-10-18T10:00:00Z"), run(3, null, "2026-10-18T11:00:00Z")])).toBe("pending");
     expect(gate([run(1, "success", "2026-10-18T10:00:00Z"), run(4, "action_required", "2026-10-18T11:00:00Z")])).toBe("green");
     expect(gate([run(4, "action_required", "2026-10-18T11:00:00Z")])).toBe("missing");
+    const phantom = { ...run(5, "failure", "2026-10-18T12:00:00Z"), event: "pull_request", triggering_actor: { login: "github-actions[bot]" } };
+    expect(gate([run(1, "success", "2026-10-18T10:00:00Z"), phantom])).toBe("green");
   });
 });
