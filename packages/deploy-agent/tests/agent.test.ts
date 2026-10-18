@@ -18,6 +18,7 @@ function fakeIO(prodHealthy: boolean, stagingFails = false) {
     git: (...args: string[]) => {
       calls.git.push(args);
       if (args[0] === "diff") return "diff --git a/x b/x";
+      if (args[0] === "show") return "# owners\n/AGENTS.md  @o\n/tools/harness/  @o\n";
       return "";
     },
     compose: (tag: string, ...args: string[]) => {
@@ -71,7 +72,7 @@ describe("deploy agent", () => {
 
     // The whole undeployed range is reverted on top of current main, migrations excluded.
     expect(calls.git).toContainEqual(["checkout", "--quiet", "--detach", "origin/main"]);
-    expect(calls.git).toContainEqual(["diff", "--binary", SHA, PREV, "--", ".", ":(exclude,glob)**/migrations/**"]);
+    expect(calls.git).toContainEqual(["diff", "--binary", SHA, PREV, "--", ".", ":(exclude,glob)**/migrations/**", ":(exclude)packages/deploy-agent/", ":(exclude)AGENTS.md", ":(exclude)tools/harness/"]);
     expect(calls.git.find((a) => a[0] === "apply")?.slice(0, 3)).toEqual(["apply", "--index", "--3way"]);
     expect(calls.git).toContainEqual(["push", "--quiet", "https://x-access-token:test-token@github.com/household/homegrown.git", "HEAD:refs/heads/revert/fff9999"]);
     expect(calls.github.find((g) => g.path === "/pulls" && g.body)?.body).toContain('"head":"revert/fff9999"');
