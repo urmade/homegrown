@@ -1,17 +1,22 @@
 import type { MetadataRoute } from "next";
+import { getT, householdLocale } from "../lib/server";
 
-export default function manifest(): MetadataRoute.Manifest {
+export const dynamic = "force-dynamic";
+
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const locale = (await householdLocale().catch(() => null)) ?? "en";
+  const t = await getT("core", locale);
   return {
-    name: "Homegrown",
-    short_name: "Homegrown",
-    description: "Unser Haushalt",
+    name: t("app.name"),
+    short_name: t("app.name"),
+    description: t("app.description"),
     id: "/",
     start_url: "/",
     scope: "/",
     display: "standalone",
     background_color: "#f7f6f1",
     theme_color: "#3f7d4e",
-    lang: "de-DE",
+    lang: locale,
     icons: [
       { src: "/icons/192", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/512", sizes: "512x512", type: "image/png", purpose: "any" },

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@homegrown/ui";
 
 /** Registers the one core service worker and offers a reload when a new version is waiting. */
-export function SwRegister() {
+export function SwRegister({ message, action }: { message: string; action: string }) {
   const [waiting, setWaiting] = useState<ServiceWorker | null>(null);
   const accepted = useRef(false);
 
@@ -25,14 +25,14 @@ export function SwRegister() {
   if (!waiting) return null;
   return (
     <div className="fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between gap-3 rounded-hg border border-border bg-surface p-3 shadow-lg">
-      <span className="text-sm">Neue Version verfügbar.</span>
+      <span className="text-sm">{message}</span>
       <Button
         onClick={() => {
           accepted.current = true;
           waiting.postMessage({ type: "SKIP_WAITING" });
         }}
       >
-        Neu laden
+        {action}
       </Button>
     </div>
   );
