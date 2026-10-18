@@ -18,6 +18,7 @@ Return NEEDS WORK if any of these hold:
 4. An acceptance criterion has no test id, or a UI criterion lacks empty, loading or error states.
 5. The offline answer is missing (what works offline, and whether writes queue).
 6. A schema change is destructive without expand-contract over two deploys.
+7. The plan fixes a symptom: the failure-mode list misses a way the touched flow can fail (name it), or a listed mode is neither addressed nor scoped out with a reason.
 
 ## Diff pass (after build, CI evidence attached)
 

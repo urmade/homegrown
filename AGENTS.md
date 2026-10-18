@@ -70,7 +70,8 @@ Vendored at a pinned SHA (`harness.lock.json`): `.cursor/skills/vendor-superpowe
 
 ## Definition of done
 
-1. Plan with reasons for every new table, module, dependency or cross-module call; passed by plan review before build.
+1. Plan with reasons for every new table, module, dependency or cross-module call, and a failure-mode list for the
+   end-to-end flow touched (fix the flow, not the symptom); passed by plan review before build.
 2. Every acceptance criterion `- [test.id] …` maps to a test titled `test.id …` (check-evidence).
 3. UI: empty, loading and error states; screenshots at 390, 820, 1280; no horizontal overflow; axe clean.
 4. PWA installable; every declared offline route passes with the network off.
