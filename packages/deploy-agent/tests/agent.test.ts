@@ -106,5 +106,6 @@ describe("deploy agent", () => {
     expect(await isGreen("s", async () => null)).toBe(false);
     expect(await isGreen("s", runs(["completed", "failure", "2026-01-01T10:00:00Z"], ["completed", "success", "2026-01-01T11:00:00Z"]))).toBe(true);
     expect(await isGreen("s", runs(["completed", "success", "2026-01-01T10:00:00Z"], ["completed", "cancelled", "2026-01-01T11:00:00Z"]))).toBe(false);
+    expect(await isGreen("s", runs(["completed", "success", "2026-01-01T10:00:00Z"], ["completed", "action_required", "2026-01-01T11:00:00Z"]))).toBe(true);
   });
 });

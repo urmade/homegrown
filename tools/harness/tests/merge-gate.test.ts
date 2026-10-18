@@ -37,5 +37,7 @@ describe("merge gate", () => {
     expect(gate([run(1, "success", "2026-10-18T10:00:00Z"), run(2, "failure", "2026-10-18T11:00:00Z")])).toBe("red 2 1");
     expect(gate([run(2, "failure", "2026-10-18T10:00:00Z"), run(1, "success", "2026-10-18T12:00:00Z", 2)])).toBe("green");
     expect(gate([run(1, "success", "2026-10-18T10:00:00Z"), run(3, null, "2026-10-18T11:00:00Z")])).toBe("pending");
+    expect(gate([run(1, "success", "2026-10-18T10:00:00Z"), run(4, "action_required", "2026-10-18T11:00:00Z")])).toBe("green");
+    expect(gate([run(4, "action_required", "2026-10-18T11:00:00Z")])).toBe("missing");
   });
 });

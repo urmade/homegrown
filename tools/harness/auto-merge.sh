@@ -89,5 +89,9 @@ sweep_prs() {
   done <<<"$prs"
 }
 
+# The hand-off job dispatches this while its own ci run is still finishing; wait for that run to complete.
+if [ -n "${WAIT_RUN:-}" ]; then
+  for _ in $(seq 36); do [ "$(gh api "repos/$R/actions/runs/$WAIT_RUN" --jq .status)" = completed ] && break; sleep 5; done
+fi
 check_main
 sweep_prs

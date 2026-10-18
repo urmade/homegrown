@@ -170,7 +170,7 @@ type CiRun = { status: string; conclusion: string | null; run_started_at?: strin
 export async function isGreen(sha: string, gh: IO["github"] = github): Promise<boolean> {
   if (!env.GITHUB_REPO) return env.HG_ALLOW_UNVERIFIED === "1";
   const data = (await gh(`/actions/workflows/ci.yml/runs?head_sha=${sha}&per_page=100`)) as { workflow_runs: CiRun[] } | null;
-  const latest = (data?.workflow_runs ?? []).sort((a, b) => (a.run_started_at ?? a.created_at).localeCompare(b.run_started_at ?? b.created_at)).at(-1);
+  const latest = (data?.workflow_runs ?? []).filter((r) => r.conclusion !== "action_required").sort((a, b) => (a.run_started_at ?? a.created_at).localeCompare(b.run_started_at ?? b.created_at)).at(-1);
   return latest?.status === "completed" && latest.conclusion === "success";
 }
 
