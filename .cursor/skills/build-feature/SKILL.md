@@ -58,4 +58,4 @@ Reviewer "diff pass" with the diff and CI artifact links. Max 2 rounds. Still NE
 
 ## 6. PR
 
-Title states the household outcome. Body: spec link, run record from `artifacts/run-record.json`, evidence links to CI artifacts. Never touch `core/` or harness paths in the same PR. Auto-merge happens on green.
+Title states the household outcome. Body: spec link, run record from `artifacts/run-record.json`, evidence links to CI artifacts. Never touch `core/` or harness paths in the same PR. Mark it ready (not draft); the auto-merge bot merges it once the latest `ci` run is green and the branch contains current `main` (it updates the branch and re-runs CI itself; failed jobs are retried once). If it comments that the branch can't be updated, merge `main` in and push.

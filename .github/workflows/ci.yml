@@ -3,21 +3,30 @@ name: ci
 # Hard gates. pull_request only (never pull_request_target); no secrets; database credentials are test-only.
 on:
   pull_request:
+    # ready_for_review: a draft that turns ready gets a fresh run whose completion triggers auto-merge.
+    # edited: the PR body is secret-scanned, so body edits are re-checked.
+    types: [opened, synchronize, reopened, ready_for_review, edited]
   push:
     branches: [main]
+  # Pushes made with GITHUB_TOKEN (auto-merge's merges and branch updates) start no runs; auto-merge
+  # dispatches this workflow on main or on the PR branch instead.
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel on main: every merged SHA needs complete check runs before the deploy agent ships it.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   NEXT_TELEMETRY_DISABLED: "1"
   MIGRATE_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
   DATABASE_URL: postgres://homegrown_app:app@localhost:5432/postgres
   APP_DB_PASSWORD: app
+  # Dispatched runs on a PR branch diff against main, like the pull_request run would.
+  HG_BASE: ${{ github.event_name == 'workflow_dispatch' && github.ref_name != 'main' && 'origin/main' || '' }}
   HG_RECORD_FILE: artifacts/db-access.jsonl
 
 jobs:
@@ -75,7 +84,7 @@ jobs:
       - name: check-data-flow (writes data-flow.json)
         run: pnpm exec tsx tools/harness/check-data-flow.ts
       - name: check-n-minus-1 (base branch tests against this schema)
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || env.HG_BASE != ''
         run: bash tools/harness/check-n-minus-1.sh
       - uses: actions/upload-artifact@v4
         if: always()
@@ -151,3 +160,14 @@ jobs:
       - name: post drift comment
         env: { GH_TOKEN: "${{ github.token }}" }
         run: gh pr comment ${{ github.event.pull_request.number }} --body-file artifacts/drift.md --edit-last --create-if-none || echo "comment skipped (read-only token)"
+
+  # Runs started by GITHUB_TOKEN (auto-merge's dispatches) fire no workflow_run event, so hand back explicitly.
+  hand-off:
+    if: always() && github.event_name == 'workflow_dispatch'
+    needs: [static, db, e2e, docker-arm64]
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+    steps:
+      - env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh workflow run auto-merge.yml --repo "${{ github.repository }}" -f wait_run=${{ github.run_id }} || echo "auto-merge dispatch failed; the scheduled sweep will pick this up"
