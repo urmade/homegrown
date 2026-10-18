@@ -1,0 +1,39 @@
+{
+  "name": "shopping-list",
+  "title": "Einkaufsliste",
+  "description": "Shared shopping list; can pull everything the pantry is low on.",
+  "tables": ["entries"],
+  "exports": {},
+  "offline": {
+    "routes": ["/shopping-list"],
+    "strategy": "network-first",
+    "offlineWrites": "queue"
+  },
+  "functions": [
+    {
+      "name": "listEntries",
+      "reads": ["entries.id", "entries.title", "entries.quantity", "entries.unit", "entries.done", "entries.source", "entries.created_at"]
+    },
+    {
+      "name": "addEntry",
+      "reads": ["entries.id"],
+      "writes": ["entries.title", "entries.quantity", "entries.unit", "entries.added_by"]
+    },
+    {
+      "name": "setDone",
+      "reads": ["entries.id"],
+      "writes": ["entries.done"]
+    },
+    {
+      "name": "clearDone",
+      "reads": ["entries.done"],
+      "writes": ["entries.*"]
+    },
+    {
+      "name": "addLowStock",
+      "reads": ["entries.title", "entries.done"],
+      "writes": ["entries.title", "entries.quantity", "entries.unit", "entries.source", "entries.added_by"],
+      "calls": ["pantry.listLowStock"]
+    }
+  ]
+}

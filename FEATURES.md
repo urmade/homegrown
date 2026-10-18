@@ -2,4 +2,20 @@
 
 # Features
 
-_No modules yet._
+## Vorrat (`pantry`)
+
+Household supplies with a minimum stock level per item.
+
+- Tables: `items`
+- Functions: `listItems`, `addItem`, `adjustQuantity`, `listLowStock`
+- Calls: none
+- Offline: network-first, writes none
+
+## Einkaufsliste (`shopping-list`)
+
+Shared shopping list; can pull everything the pantry is low on.
+
+- Tables: `entries`
+- Functions: `listEntries`, `addEntry`, `setDone`, `clearDone`, `addLowStock`
+- Calls: `pantry.listLowStock`
+- Offline: network-first, writes queue
