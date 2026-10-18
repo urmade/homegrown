@@ -80,6 +80,12 @@ Vendored at a pinned SHA (`harness.lock.json`): `.cursor/skills/vendor-superpowe
 8. Diff review PASS within 2 rounds, else abort, open an issue, ping the owner.
 9. All CI gates green; evidence links point at CI artifacts, never at claims.
 
+## Merge and deploy
+
+Auto-merge (`.github/workflows/auto-merge.yml`, runs main's copy only): non-draft, non-harness PRs merge when the
+latest `ci` run on the head is green and the branch contains `main`. Harness = CODEOWNERS paths. The deploy agent
+deploys only `main` SHAs whose latest `ci` run is green. Details: `tools/harness/auto-merge.sh`.
+
 ## Fail closed
 
 When in doubt, stop and report. Never skip, weaken or delete a test to get green. Never edit `core/` or harness

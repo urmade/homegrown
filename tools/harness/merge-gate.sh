@@ -1,36 +1,17 @@
 #!/usr/bin/env bash
-# Merge gate: exits 0 only when every required CI check on the SHA has completed with success.
-# Red exits 2 at once; missing or pending checks are polled until the timeout, then exit 3.
-# Usage: merge-gate.sh <sha> [timeout-seconds]. Needs GH_TOKEN with checks: read and GITHUB_REPOSITORY.
-# CHECK_RUNS_JSON (a check-runs API response) replaces the API call, for tests.
+# Merge gate, one shot: prints the verdict for a SHA from the most recently started run of ci.yml.
+#   green               latest ci run completed with success
+#   red <run> <attempt> latest ci run completed with anything else (failure, cancelled, timed_out, ...)
+#   pending             latest ci run not completed
+#   missing             no ci run for the SHA
+# The deploy agent applies the same rule (packages/deploy-agent isGreen). Every job in ci.yml is required.
+# Usage: merge-gate.sh <sha>. Needs GH_TOKEN and GITHUB_REPOSITORY. CI_RUNS_JSON replaces the API call in tests.
 set -euo pipefail
 SHA="$1"
-TIMEOUT="${2:-2700}"
-INTERVAL="${MERGE_GATE_INTERVAL:-20}"
-# The ci.yml jobs that gate a merge; drift only posts a comment.
-REQUIRED="static db e2e docker-arm64"
-
-verdict() {
-  jq -r --arg req "$REQUIRED" '
-    [.check_runs[] | {name, status, conclusion, started_at}] as $runs
-    | [ ($req | split(" "))[] as $n
-        | ([$runs[] | select(.name == $n)] | sort_by(.started_at) | last) as $r
-        | if $r == null then "\($n):missing"
-          elif $r.status != "completed" then "\($n):pending"
-          elif $r.conclusion == "success" then "\($n):ok"
-          else "\($n):red(\($r.conclusion))" end ]
-    | (if any(.[]; test(":red")) then "red" elif all(.[]; test(":ok$")) then "green" else "wait" end) + " " + join(" ")'
-}
-
-deadline=$(( $(date +%s) + TIMEOUT ))
-while :; do
-  if [ -n "${CHECK_RUNS_JSON:-}" ]; then json="$CHECK_RUNS_JSON"; else json=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs?per_page=100"); fi
-  result=$(verdict <<<"$json")
-  echo "merge-gate $SHA: $result"
-  case "$result" in
-    green*) exit 0 ;;
-    red*) exit 2 ;;
-  esac
-  if [ "$(date +%s)" -ge "$deadline" ]; then echo "merge-gate: timed out waiting for required checks"; exit 3; fi
-  sleep "$INTERVAL"
-done
+if [ -n "${CI_RUNS_JSON:-}" ]; then json="$CI_RUNS_JSON"; else json=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$SHA&per_page=100"); fi
+jq -r '
+  (.workflow_runs | sort_by(.run_started_at // .created_at) | last) as $r
+  | if $r == null then "missing"
+    elif $r.status != "completed" then "pending"
+    elif $r.conclusion == "success" then "green"
+    else "red \($r.id) \($r.run_attempt)" end' <<<"$json"

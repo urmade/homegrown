@@ -7,7 +7,7 @@ description: A deploy went red and was rolled back. Revert the merge on main, re
 
 The deploy agent already rolled prod back to the previous image and commented on the PR with the error logs for the SHA. Prod schema stays (N-1 makes that safe).
 
-1. **Revert first.** Open a revert PR of the merge commit on main. It auto-merges on green, so main matches prod again.
+1. **Revert first.** The deploy agent already pushed `revert/<sha>` (migrations kept) and opened its PR; it merges through the normal gate, so main matches prod again. If the revert failed (conflict), open one yourself the same way.
 2. **Evidence.** Read the PR comment ("Error logs for this SHA"). For more: `/admin/logs?sha=<sha>&level=error`, then follow one `correlationId`.
 3. **Reproduce** in a failing test titled with the original criterion id or a new `[module.regression-…]` criterion added to the spec. Use `.cursor/skills/vendor-superpowers/systematic-debugging/SKILL.md`.
 4. **Fix** on a branch through `build-feature` (plan pass can be short: what broke, why the fix is minimal).

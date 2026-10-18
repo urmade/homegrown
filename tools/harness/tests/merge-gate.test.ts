@@ -1,43 +1,41 @@
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
-type Run = { name: string; status: string; conclusion: string | null; started_at: string };
-const run = (name: string, conclusion: string | null, started_at = "2026-10-18T10:00:00Z"): Run => ({
-  name,
+type Run = { id: number; status: string; conclusion: string | null; run_attempt: number; run_started_at: string; created_at: string };
+const run = (id: number, conclusion: string | null, started: string, attempt = 1): Run => ({
+  id,
   status: conclusion === null ? "in_progress" : "completed",
   conclusion,
-  started_at,
+  run_attempt: attempt,
+  run_started_at: started,
+  created_at: "2026-10-18T09:00:00Z",
 });
-const allGreen = ["static", "db", "e2e", "docker-arm64"].map((n) => run(n, "success"));
 
-function gate(runs: Run[]) {
-  const r = spawnSync("bash", ["tools/harness/merge-gate.sh", "abc123", "0"], {
-    env: { ...process.env, CHECK_RUNS_JSON: JSON.stringify({ check_runs: runs }), MERGE_GATE_INTERVAL: "0" },
+const gate = (runs: Run[]) =>
+  spawnSync("bash", ["tools/harness/merge-gate.sh", "abc123"], {
+    env: { ...process.env, CI_RUNS_JSON: JSON.stringify({ workflow_runs: runs }) },
     encoding: "utf8",
-  });
-  return { code: r.status, out: r.stdout };
-}
+  }).stdout.trim();
 
 describe("merge gate", () => {
-  it("harness.merge-gate.green passes only when every required check succeeded", () => {
-    expect(gate([...allGreen, run("drift", "failure"), run("enable", null)]).code).toBe(0);
+  it("harness.merge-gate.green merges only on a completed, successful latest ci run", () => {
+    expect(gate([run(1, "success", "2026-10-18T10:00:00Z")])).toBe("green");
   });
 
-  it("harness.merge-gate.red never merges when a required check failed or was cancelled", () => {
-    expect(gate([...allGreen.slice(1), run("static", "failure")]).code).toBe(2);
-    expect(gate([...allGreen.slice(1), run("static", "cancelled")]).code).toBe(2);
+  it("harness.merge-gate.red reports failed, cancelled and timed-out runs with run id and attempt", () => {
+    expect(gate([run(7, "failure", "2026-10-18T10:00:00Z")])).toBe("red 7 1");
+    expect(gate([run(8, "cancelled", "2026-10-18T10:00:00Z", 2)])).toBe("red 8 2");
+    expect(gate([run(9, "timed_out", "2026-10-18T10:00:00Z")])).toBe("red 9 1");
   });
 
-  it("harness.merge-gate.pending-missing waits and then gives up without merging", () => {
-    expect(gate([...allGreen.slice(1), run("static", null)]).code).toBe(3);
-    expect(gate(allGreen.slice(1)).code).toBe(3);
-    expect(gate([]).code).toBe(3);
+  it("harness.merge-gate.pending-missing never merges while ci is running or absent", () => {
+    expect(gate([run(1, null, "2026-10-18T10:00:00Z")])).toBe("pending");
+    expect(gate([])).toBe("missing");
   });
 
-  it("harness.merge-gate.latest uses the newest run of each check (re-runs count, old greens do not)", () => {
-    const rerunGreen = [...allGreen.slice(1), run("static", "failure"), run("static", "success", "2026-10-18T11:00:00Z")];
-    expect(gate(rerunGreen).code).toBe(0);
-    const rerunRed = [...allGreen, run("e2e", "failure", "2026-10-18T11:00:00Z")];
-    expect(gate(rerunRed).code).toBe(2);
+  it("harness.merge-gate.latest the most recently started run (incl. a re-run attempt) decides", () => {
+    expect(gate([run(1, "success", "2026-10-18T10:00:00Z"), run(2, "failure", "2026-10-18T11:00:00Z")])).toBe("red 2 1");
+    expect(gate([run(2, "failure", "2026-10-18T10:00:00Z"), run(1, "success", "2026-10-18T12:00:00Z", 2)])).toBe("green");
+    expect(gate([run(1, "success", "2026-10-18T10:00:00Z"), run(3, null, "2026-10-18T11:00:00Z")])).toBe("pending");
   });
 });
