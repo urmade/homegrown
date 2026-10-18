@@ -38,4 +38,4 @@ export APP_DB_PASSWORD=app DATABASE_URL=postgres://homegrown_app:app@localhost:5
 pnpm migrate && pnpm dev
 ```
 
-See `AGENTS.md` for tests, checks and the module contract.
+See `AGENTS.md` for tests, checks and the module contract, and `docs/adr/` for pipeline decisions.
