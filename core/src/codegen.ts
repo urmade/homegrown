@@ -24,7 +24,7 @@ export function generateRegistry(root = repoRoot()) {
     mods
       .map((m) => `import ${camel(m.manifest.name)}Manifest from "${rel(join(m.dir, "module.json"))}";\nimport * as ${camel(m.manifest.name)}Fns from "${rel(join(m.dir, "src/functions"))}";`)
       .join("\n") +
-      `\nimport { ModuleManifest } from "../core/src/manifest";\n\nexport const modules = [\n${mods
+      `\nimport { ModuleManifest } from "../core/src/manifest";\n\nexport const modules: { manifest: ModuleManifest; functions: Record<string, unknown> }[] = [\n${mods
         .map((m) => `  { manifest: ModuleManifest.parse(${camel(m.manifest.name)}Manifest), functions: ${camel(m.manifest.name)}Fns as Record<string, unknown> },`)
         .join("\n")}\n];\n`,
   );

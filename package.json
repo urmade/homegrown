@@ -15,11 +15,16 @@
     "typecheck": "pnpm gen && tsc -p tsconfig.json --noEmit"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "sharp", "@tailwindcss/oxide"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "@tailwindcss/oxide"
+    ]
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3"
-  }
+  },
+  "type": "module"
 }

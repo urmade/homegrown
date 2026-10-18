@@ -18,6 +18,16 @@ export function Card({ children, className }: { children: ReactNode; className?:
   return <section className={cn("rounded-hg border border-border bg-surface p-4 sm:p-5", className)}>{children}</section>;
 }
 
+/** Main content plus a side panel; stacks on phone and tablet. */
+export function Columns({ main, aside }: { main: ReactNode; aside: ReactNode }) {
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      <div className="min-w-0 lg:col-span-2">{main}</div>
+      <div className="min-w-0">{aside}</div>
+    </div>
+  );
+}
+
 export function Button({ variant = "primary", className, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" }) {
   return (
     <button
@@ -48,8 +58,8 @@ export function Badge({ children, tone = "neutral" }: { children: ReactNode; ton
       className={cn(
         "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
         tone === "neutral" && "bg-surface-muted text-fg-muted",
-        tone === "warn" && "bg-warn/15 text-warn",
-        tone === "accent" && "bg-accent/15 text-accent",
+        tone === "warn" && "bg-warn text-warn-fg",
+        tone === "accent" && "bg-accent text-accent-fg",
       )}
     >
       {children}

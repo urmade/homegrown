@@ -1,10 +1,8 @@
+import { dirname } from "node:path";
 import { generateSW, type RuntimeCaching } from "workbox-build";
 import type { ModuleManifest } from "./manifest";
 
 const HANDLER = { "network-first": "NetworkFirst", "cache-first": "CacheFirst", "stale-while-revalidate": "StaleWhileRevalidate" } as const;
-
-/** Paths the service worker must never cache. check-pwa verifies this in CI. */
-export const NEVER_CACHE = ["/admin", "/api/auth", "/api/admin", "/health"];
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const prefix = (paths: string[]) => new RegExp(`^(${paths.map(escape).join("|")})(/|\\?|$)`);
@@ -12,6 +10,7 @@ const prefix = (paths: string[]) => new RegExp(`^(${paths.map(escape).join("|")}
 /** Every module's offline declaration composed into the one core-owned service worker. */
 export function runtimeCaching(manifests: ModuleManifest[]): RuntimeCaching[] {
   const rules: RuntimeCaching[] = [
+    // Never cached: admin, logs, auth and health. check-pwa verifies this in CI.
     { urlPattern: ({ url }) => /^(\/admin|\/api\/auth|\/api\/admin|\/health)(\/|\?|$)/.test(url.pathname) || /\/health$/.test(url.pathname), handler: "NetworkOnly" },
     { urlPattern: /\/_next\/static\//, handler: "CacheFirst", options: { cacheName: "shell-static" } },
     { urlPattern: /\/icons\//, handler: "CacheFirst", options: { cacheName: "shell-static" } },
@@ -49,7 +48,8 @@ export async function buildServiceWorker(manifests: ModuleManifest[], swDest: st
     sourcemap: false,
     clientsClaim: true,
     skipWaiting: false,
-    globDirectory: undefined,
+    // Workbox only emits the precache manifest when it globs a directory; the offline page comes from additionalManifestEntries.
+    globDirectory: dirname(swDest),
     globPatterns: [],
     additionalManifestEntries: [{ url: "/offline", revision }],
     runtimeCaching: runtimeCaching(manifests),

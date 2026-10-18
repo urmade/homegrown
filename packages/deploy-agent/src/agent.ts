@@ -65,7 +65,7 @@ async function report(sha: string, ok: boolean, text: string) {
 
 function dump(label: string, db = "homegrown") {
   const file = join(BACKUPS, `${label}-${new Date().toISOString().replace(/[:.]/g, "-")}.dump`);
-  run("pg_dump", ["-Fc", "--exclude-schema=logs", "-f", file, ownerUrl(db)]);
+  run("pg_dump", ["-Fc", "--exclude-table-data=logs.*", "-f", file, ownerUrl(db)]);
   return file;
 }
 

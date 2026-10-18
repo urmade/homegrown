@@ -119,10 +119,6 @@ export type Logger = Record<Level, (msg: string, data?: Record<string, unknown>)
 let batcher: Batcher | undefined;
 const minLevel = (): Level => (process.env.HG_LOG_LEVEL as Level) ?? (process.env.NODE_ENV === "production" ? "info" : "debug");
 
-export function configureLogging(sinks: LogSink[]) {
-  batcher = new Batcher(sinks);
-}
-
 export const flushLogs = () => batcher?.flush() ?? Promise.resolve();
 
 function emit(level: Level, msg: string, data?: Record<string, unknown>) {

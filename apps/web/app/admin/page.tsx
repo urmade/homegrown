@@ -7,7 +7,7 @@ export default async function Admin() {
   return (
     <>
       <PageHeader title="Verwaltung" description={`Version ${process.env.HG_SHA?.slice(0, 7) ?? "lokal"}`} />
-      <div className="grid gap-4 md:grid-cols-[1fr_2fr]">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <h2 className="font-semibold">Deploys</h2>
           <p className="mt-1 text-sm text-fg-muted">{paused ? "Pausiert: neue Versionen werden nicht ausgerollt." : "Aktiv: grüne Versionen werden automatisch ausgerollt."}</p>
@@ -17,7 +17,7 @@ export default async function Admin() {
             </Button>
           </form>
         </Card>
-        <Card>
+        <Card className="md:col-span-2">
           <h2 className="mb-3 font-semibold">Verlauf</h2>
           {events.length === 0 ? (
             <EmptyState>Noch keine Ereignisse.</EmptyState>

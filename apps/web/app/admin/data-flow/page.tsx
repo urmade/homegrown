@@ -7,8 +7,9 @@ function CallGraph({ flow }: { flow: DataFlow }) {
   const w = Math.max(320, names.length * 220);
   const x = (name: string) => ((names.indexOf(name) + 0.5) * w) / names.length;
   const edges = flow.calls.map((c, i) => ({ ...c, a: c.from.split(".")[0]!, b: c.to.split(".")[0]!, i }));
+  const top = 36 - edges.length * 9;
   return (
-    <svg viewBox={`0 0 ${w} 200`} className="h-auto w-full" role="img" aria-label="Modul-Aufrufgraph">
+    <svg viewBox={`0 ${top} ${w} ${130 - top}`} className="h-auto w-full" role="img" aria-label="Modul-Aufrufgraph">
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="var(--color-accent)" />
@@ -18,10 +19,11 @@ function CallGraph({ flow }: { flow: DataFlow }) {
         const [x1, x2] = [x(e.a), x(e.b)];
         const dir = x2 >= x1 ? 1 : -1;
         const lift = 60 + e.i * 18;
+        const apex = 100 - lift / 2;
         return (
           <g key={`${e.from}-${e.to}`}>
-            <path d={`M${x1 + dir * 70},100 Q${(x1 + x2) / 2},${100 - dir * lift} ${x2 - dir * 70},100`} fill="none" stroke="var(--color-accent)" strokeWidth="2" markerEnd="url(#arrow)" />
-            <text x={(x1 + x2) / 2} y={100 - dir * (lift / 2 + 8)} textAnchor="middle" fontSize="12" fill="var(--color-fg-muted)">
+            <path d={`M${x1 + dir * 70},100 Q${(x1 + x2) / 2},${100 - lift} ${x2 - dir * 70},100`} fill="none" stroke="var(--color-accent)" strokeWidth="2" markerEnd="url(#arrow)" />
+            <text x={(x1 + x2) / 2} y={apex - 8} textAnchor="middle" fontSize="12" fill="var(--color-fg-muted)">
               {e.from.split(".")[1]} → {e.to.split(".")[1]}
             </text>
           </g>

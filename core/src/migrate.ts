@@ -72,7 +72,7 @@ export async function migrate(opts: { url: string; appRole: string; appPassword?
           say(`applied ${t.module}/${name}`);
         } catch (e) {
           await client.query("rollback");
-          throw new Error(`${t.module}/${name}: ${(e as Error).message}`);
+          throw new Error(`${t.module}/${name}: ${(e as Error).message}`, { cause: e });
         }
       }
     }
