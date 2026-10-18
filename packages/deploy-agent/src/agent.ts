@@ -98,7 +98,15 @@ export async function revertOnMain(x: IO, sha: string, prev: string): Promise<st
     x.git("checkout", "--quiet", "--detach", "origin/main");
     // Migrations stay: the schema is already applied, N-1 keeps the previous code compatible with it, and
     // check-migrations rejects deleting applied migrations, which would leave the revert PR red forever.
-    const patch = x.git("diff", "--binary", sha, base, "--", ".", ":(exclude,glob)**/migrations/**");
+    // Harness paths (CODEOWNERS) stay too: they are not deployed, and touching them would make the revert
+    // PR a harness PR that waits for owner review instead of merging. The agent itself is not deployed by
+    // this process either, so its own code is never reverted for an app failure.
+    const harness = x
+      .git("show", "origin/main:.github/CODEOWNERS")
+      .split("\n")
+      .filter((l) => l.trim() && !l.trim().startsWith("#"))
+      .map((l) => `:(exclude)${l.trim().split(/\s+/)[0]!.replace(/^\//, "")}`);
+    const patch = x.git("diff", "--binary", sha, base, "--", ".", ":(exclude,glob)**/migrations/**", ":(exclude)packages/deploy-agent/", ...harness);
     if (patch) {
       const file = join(tmpdir(), `revert-${sha}.patch`);
       writeFileSync(file, `${patch}\n`);
