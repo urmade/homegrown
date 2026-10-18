@@ -1,0 +1,48 @@
+/* Theme tokens. Households override them in theme/overrides.css; modules never hard-code colors. */
+:root {
+  --hg-bg: #f7f6f1;
+  --hg-surface: #ffffff;
+  --hg-surface-muted: #efede5;
+  --hg-fg: #24261f;
+  --hg-fg-muted: #62655a;
+  --hg-border: #dcd9cd;
+  --hg-accent: #3f7d4e;
+  --hg-accent-fg: #ffffff;
+  --hg-warn: #a84b14;
+  --hg-warn-fg: #ffffff;
+  --hg-danger: #b42318;
+  --hg-radius: 0.75rem;
+  --hg-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --hg-bg: #161712;
+    --hg-surface: #1f211a;
+    --hg-surface-muted: #2a2c24;
+    --hg-fg: #ecebe4;
+    --hg-fg-muted: #a5a79b;
+    --hg-border: #3a3d33;
+    --hg-accent: #6fb27f;
+    --hg-accent-fg: #10140f;
+    --hg-warn: #e08a4f;
+    --hg-warn-fg: #10140f;
+    --hg-danger: #f2786d;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--hg-bg);
+  --color-surface: var(--hg-surface);
+  --color-surface-muted: var(--hg-surface-muted);
+  --color-fg: var(--hg-fg);
+  --color-fg-muted: var(--hg-fg-muted);
+  --color-border: var(--hg-border);
+  --color-accent: var(--hg-accent);
+  --color-accent-fg: var(--hg-accent-fg);
+  --color-warn: var(--hg-warn);
+  --color-warn-fg: var(--hg-warn-fg);
+  --color-danger: var(--hg-danger);
+  --radius-hg: var(--hg-radius);
+  --font-sans: var(--hg-font);
+}

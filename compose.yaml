@@ -1,0 +1,76 @@
+name: homegrown
+
+x-app: &app
+  image: homegrown-app:${HG_TAG:-local}
+  logging:
+    driver: json-file
+    options: { max-size: 10m, max-file: "3" }
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: homegrown
+    volumes: [db:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      retries: 20
+
+  # One-shot: the only container with owner credentials besides the deploy agent.
+  migrate:
+    <<: *app
+    build:
+      context: .
+      args: { HG_SHA: "${HG_TAG:-local}" }
+    command: ["pnpm", "-s", "migrate"]
+    restart: "no"
+    environment:
+      MIGRATE_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/${HG_DB:-homegrown}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env}
+    depends_on:
+      db: { condition: service_healthy }
+
+  # No Docker socket, no host mounts, no backups: just the app role.
+  app:
+    <<: *app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://homegrown_app:${APP_DB_PASSWORD}@db:5432/homegrown
+      HG_LOG_SINKS: ${HG_LOG_SINKS:-postgres}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    env_file: [{ path: modules.env, required: false }]
+    ports: ["${HG_PORT:-3000}:3000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  # Started only by the deploy agent to rehearse a release against the latest restored dump.
+  app-staging:
+    <<: *app
+    profiles: [staging]
+    environment:
+      DATABASE_URL: postgres://homegrown_app:${APP_DB_PASSWORD}@db:5432/homegrown_staging
+      HG_LOG_SINKS: stdout
+
+  deploy-agent:
+    profiles: [deploy]
+    build: { context: ., dockerfile: packages/deploy-agent/Dockerfile }
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      GITHUB_REPO: ${GITHUB_REPO:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      HG_ALLOW_UNVERIFIED: ${HG_ALLOW_UNVERIFIED:-0}
+      COMPOSE_PROJECT_NAME: homegrown
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/repo
+      - ${HG_BACKUP_DIR:-./backups}:/backups
+    depends_on:
+      db: { condition: service_healthy }
+
+volumes:
+  db:

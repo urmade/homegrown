@@ -1,0 +1,5 @@
+{
+  "extends": "./core/tsconfig.base.json",
+  "include": ["core", "packages", "apps", "tools", ".homegrown"],
+  "exclude": ["**/node_modules", "**/.next"]
+}

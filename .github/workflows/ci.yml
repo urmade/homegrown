@@ -1,0 +1,41 @@
+name: ci
+
+# Bootstrap gates for the core PR: the full harness CI (tools/harness) replaces this file in the harness PR.
+# pull_request only (never pull_request_target); no secrets.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: ubuntu-24.04
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsx core/bin/gen.ts
+      - run: pnpm exec tsc -p tsconfig.json --noEmit
+      - name: core and deploy-agent unit tests (incl. rollback after promote)
+        run: pnpm -r --if-present test
+      - run: pnpm --filter @homegrown/web build
+
+  docker-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: compose up on arm64 (the NAS target)
+        run: |
+          printf 'POSTGRES_PASSWORD=ci-only-pg\nAPP_DB_PASSWORD=ci-only-app\n' > .env
+          docker compose up -d --build --wait app
+          curl -fsS localhost:3000/health
+          curl -fsS -o /dev/null -w '%{http_code}\n' localhost:3000/ | grep -E '^(200|307)$'
+      - if: failure()
+        run: docker compose logs

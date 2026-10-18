@@ -1,0 +1,11 @@
+**/node_modules
+**/.next
+.homegrown
+**/.generated
+apps/web/public/sw.js
+.git
+.env
+backups
+artifacts
+test-results
+playwright-report

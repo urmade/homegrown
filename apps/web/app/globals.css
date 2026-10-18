@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@import "@homegrown/ui/tokens.css";
+@source "../../../packages/ui/src";
+@source "../../../apps/*/src";
+
+html {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+}
