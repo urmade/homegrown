@@ -1,7 +1,6 @@
 name: ci
 
-# Bootstrap gates for the core PR: the full harness CI (tools/harness) replaces this file in the harness PR.
-# pull_request only (never pull_request_target); no secrets.
+# Hard gates. pull_request only (never pull_request_target); no secrets; database credentials are test-only.
 on:
   pull_request:
   push:
@@ -10,32 +9,145 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  MIGRATE_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+  DATABASE_URL: postgres://homegrown_app:app@localhost:5432/postgres
+  APP_DB_PASSWORD: app
+  HG_RECORD_FILE: artifacts/db-access.jsonl
+
 jobs:
-  core:
+  static:
     runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsx core/bin/gen.ts
+      - name: check-core (core read-only, no mixed harness + apps PRs)
+        run: pnpm exec tsx tools/harness/check-core.ts
+      - name: lint (no console, no raw DB clients or cross-module imports in modules)
+        run: pnpm exec eslint -c tools/harness/eslint.config.mjs .
+      - name: typecheck (undeclared cross-module calls fail here)
+        run: pnpm exec tsc -p tsconfig.json --noEmit
+      - run: pnpm exec tsx tools/harness/check-manifest.ts
+      - name: generated docs are fresh
+        run: pnpm exec tsx tools/harness/gen-docs.ts --check
+      - run: pnpm exec tsx tools/harness/check-migrations.ts
+      - run: pnpm exec tsx tools/harness/check-plan.ts
+      - run: pnpm exec tsx tools/harness/check-evidence.ts
+      - run: pnpm exec tsx tools/harness/check-tests.ts
+      - run: pnpm exec tsx tools/harness/check-module-agents.ts
+      - run: pnpm exec tsx tools/harness/check-design.ts
+      - name: check-i18n (every UI string from a catalog; every key exists in en)
+        run: pnpm exec tsx tools/harness/check-i18n.ts
+      - run: pnpm exec tsx tools/harness/check-secrets.ts
+      - name: knip (unused files, exports, dependencies)
+        run: pnpm exec knip -c tools/harness/knip.json
+
+  db:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsx core/bin/gen.ts
+      - name: migrations (ledger, per-module roles)
+        run: pnpm exec tsx core/bin/migrate.ts
+      - name: tests (ctx.db recorder fails on undeclared access)
+        run: pnpm exec vitest run -c tools/harness/vitest.config.mts
+      - name: check-data-flow (writes data-flow.json)
+        run: pnpm exec tsx tools/harness/check-data-flow.ts
+      - name: check-n-minus-1 (base branch tests against this schema)
+        if: github.event_name == 'pull_request'
+        run: bash tools/harness/check-n-minus-1.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: data-flow
+          path: |
+            .homegrown/data-flow.json
+            artifacts/db-access.jsonl
+            artifacts/vitest.json
+
+  e2e:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 20
     env:
-      NEXT_TELEMETRY_DISABLED: "1"
+      HG_RECORD_FILE: ""
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec tsx core/bin/gen.ts
-      - run: pnpm exec tsc -p tsconfig.json --noEmit
-      - name: core and deploy-agent unit tests (incl. rollback after promote)
-        run: pnpm -r --if-present test
-      - run: pnpm --filter @homegrown/web build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec tsx core/bin/migrate.ts
+      - run: pnpm exec tsx core/bin/gen-data-flow.ts
+      - run: pnpm exec tsx core/bin/gen.ts && pnpm --filter @homegrown/web build
+      - name: check-responsive + check-pwa + module flows (390/820/1280, overflow, axe, installability, offline)
+        run: pnpm exec playwright test -c tools/harness/playwright.config.ts
+        env: { CI: "1" }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: |
+            artifacts/screenshots
+            playwright-report
 
   docker-arm64:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
-      - name: compose up on arm64 (the NAS target)
+      - name: compose up on arm64 (the NAS target) and smoke every module
         run: |
           printf 'POSTGRES_PASSWORD=ci-only-pg\nAPP_DB_PASSWORD=ci-only-app\n' > .env
           docker compose up -d --build --wait app
           curl -fsS localhost:3000/health
-          curl -fsS -o /dev/null -w '%{http_code}\n' localhost:3000/ | grep -E '^(200|307)$'
+          test "$(curl -s -o /dev/null -w '%{redirect_url}' localhost:3000/)" = "http://localhost:3000/setup"
+          # Equivalent of choosing English on /setup (a server action, not curl-able).
+          docker compose exec -T db psql -U postgres homegrown -qc "insert into core.settings (key, value) values ('household_locale', 'en')"
+          for m in $(ls apps/*/module.json 2>/dev/null | xargs -rn1 dirname | xargs -rn1 basename); do curl -fsS "localhost:3000/$m/health"; test "$(curl -s -o /dev/null -w '%{http_code}' "localhost:3000/$m")" = 200; done
+          curl -fsS localhost:3000/admin/data-flow | grep -q 'Data flow'
       - if: failure()
         run: docker compose logs
+
+  drift:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsx tools/harness/report-drift.ts
+      - name: post drift comment
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh pr comment ${{ github.event.pull_request.number }} --body-file artifacts/drift.md --edit-last --create-if-none || echo "comment skipped (read-only token)"

@@ -1,0 +1,11 @@
+# Harness tier: the only human approval point. Forks replace @urmade with their technical owner.
+# Branch protection: require PR, status checks and code-owner review; no bypass; include administrators.
+/AGENTS.md              @urmade
+/harness.lock.json      @urmade
+/.cursor/rules/         @urmade
+/.cursor/skills/        @urmade
+/.cursor/agents/        @urmade
+/.cursor/hooks.json     @urmade
+/.cursor/hooks/         @urmade
+/.github/               @urmade
+/tools/harness/         @urmade

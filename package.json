@@ -12,7 +12,13 @@
     "dev": "pnpm gen && pnpm --filter @homegrown/web dev",
     "build": "pnpm gen && pnpm --filter @homegrown/web build",
     "start": "pnpm --filter @homegrown/web start",
-    "typecheck": "pnpm gen && tsc -p tsconfig.json --noEmit"
+    "typecheck": "pnpm gen && tsc -p tsconfig.json --noEmit",
+    "lint": "eslint -c tools/harness/eslint.config.mjs .",
+    "test": "vitest run -c tools/harness/vitest.config.mts",
+    "e2e": "playwright test -c tools/harness/playwright.config.ts",
+    "gen:docs": "tsx tools/harness/gen-docs.ts",
+    "knip": "knip -c tools/harness/knip.json",
+    "harness:static": "tsx tools/harness/check-core.ts && tsx tools/harness/check-manifest.ts && tsx tools/harness/gen-docs.ts --check && tsx tools/harness/check-migrations.ts && tsx tools/harness/check-plan.ts && tsx tools/harness/check-evidence.ts && tsx tools/harness/check-tests.ts && tsx tools/harness/check-module-agents.ts && tsx tools/harness/check-design.ts && tsx tools/harness/check-i18n.ts && tsx tools/harness/check-secrets.ts"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -24,7 +30,16 @@
   "devDependencies": {
     "@types/node": "^22.15.0",
     "tsx": "^4.23.15",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "@axe-core/playwright": "^4.14.0",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
+    "eslint": "^10.13.0",
+    "jscpd": "^5.4.1",
+    "knip": "^6.41.0",
+    "prettier": "^3.9.10",
+    "typescript-eslint": "^8.71.2",
+    "vitest": "^5.0.5"
   },
   "type": "module"
 }

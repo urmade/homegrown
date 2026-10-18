@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [{ "command": "node .cursor/hooks/guard-core.mjs" }, { "command": "node .cursor/hooks/format.mjs" }],
+    "stop": [{ "command": "node .cursor/hooks/stop-gate.mjs" }]
+  }
+}

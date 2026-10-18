@@ -1,0 +1,7 @@
+---
+description: UI rules
+globs: apps/**/*.tsx,packages/ui/**
+---
+
+- Use @homegrown/ui; new patterns go into the design system first; log local deviations in DESIGN.md (lint, check-design).
+- Every UI is responsive for phone, tablet and desktop unless the user says otherwise; record exceptions in DESIGN.md (check-responsive).

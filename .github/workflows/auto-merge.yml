@@ -1,0 +1,29 @@
+name: auto-merge
+
+# Non-harness PRs merge themselves once required checks pass. Harness PRs wait for CODEOWNERS review.
+# Drafts are ignored. pull_request only; GITHUB_TOKEN only.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: skip harness PRs
+        id: scope
+        run: |
+          git diff --name-only "origin/${{ github.base_ref }}...HEAD" > changed.txt
+          if grep -qE '^(AGENTS\.md|harness\.lock\.json|\.cursor/(rules|skills|agents|hooks)/|\.cursor/hooks\.json|\.github/|tools/harness/)' changed.txt; then
+            echo "harness=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.scope.outputs.harness != 'true'
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh pr merge ${{ github.event.pull_request.number }} --auto --squash
