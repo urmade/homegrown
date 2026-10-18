@@ -4,4 +4,4 @@
 
 Exported cross-module functions. Reuse one before adding a new module, table or capability.
 
-_None yet._
+- `pantry.listLowStock`: Items whose quantity is below their minimum, with the missing amount. Used by: `shopping-list.addLowStock`.

@@ -1,0 +1,16 @@
+{
+  "name": "@homegrown/mod-shopping-list",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@homegrown/core": "workspace:*",
+    "@homegrown/ui": "workspace:*",
+    "kysely": "^0.29.7",
+    "react": "^19.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0"
+  }
+}

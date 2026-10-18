@@ -1,0 +1,17 @@
+{
+  "title": "Shopping list",
+  "description": "Shop together, even offline.",
+  "open": "{count} open",
+  "addLowStock": "Add from pantry",
+  "addedLowStock": "Added {count} items from the pantry.",
+  "clearDone": "Remove checked",
+  "empty": "The list is empty.",
+  "error.retry": "That didn't work. Please try again.",
+  "savedOffline": "Saved offline. It will sync as soon as you're back online.",
+  "entry.done": "{title} done",
+  "entry.fromPantry": "Pantry",
+  "form.title": "Add",
+  "form.item": "Item",
+  "form.quantity": "Quantity",
+  "form.submit": "Add to list"
+}

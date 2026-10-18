@@ -1,0 +1,19 @@
+{
+  "title": "Vorrat",
+  "description": "Was da ist und was nachgekauft werden muss.",
+  "empty": "Der Vorrat ist leer. Lege rechts den ersten Artikel an.",
+  "error.retry": "Das hat nicht geklappt. Bitte erneut versuchen.",
+  "error.offline": "Offline: Änderungen am Vorrat sind erst wieder online möglich.",
+  "item.stock": "{quantity} {unit} · Minimum {min}",
+  "item.low": "knapp",
+  "unit.pieces": "Stk.",
+  "item.decrease": "{name} verringern",
+  "item.increase": "{name} erhöhen",
+  "form.title": "Neuer Artikel",
+  "form.name": "Name",
+  "form.unit": "Einheit",
+  "form.unitPlaceholder": "Stk.",
+  "form.quantity": "Bestand",
+  "form.min": "Minimum",
+  "form.submit": "Hinzufügen"
+}
