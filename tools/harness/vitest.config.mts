@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   root: new URL("../..", import.meta.url).pathname,
   test: {
-    include: ["core/tests/**/*.test.ts", "apps/*/tests/**/*.test.ts", "tools/harness/tests/**/*.test.ts"],
+    include: ["core/tests/**/*.test.ts", "packages/*/tests/**/*.test.ts", "apps/*/tests/**/*.test.ts", "tools/harness/tests/**/*.test.ts"],
     globalSetup: ["tools/harness/vitest.setup.ts"],
     environment: "node",
     fileParallelism: false,

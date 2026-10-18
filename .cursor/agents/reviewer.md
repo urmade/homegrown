@@ -28,7 +28,7 @@ Return NEEDS WORK if any of these hold:
 3. Evidence is a claim rather than a CI artifact (screenshots, Playwright, data-flow.json).
 4. `module.json` declarations do not match what the code reads, writes or calls.
 5. Logs could contain content, personal data or secrets.
-6. UI copy is not de-DE, or a UI deviation lacks a DESIGN.md entry.
+6. UI text is not from a catalog, a de translation is missing or wrong, or a UI deviation lacks a DESIGN.md entry.
 
 ## Output
 

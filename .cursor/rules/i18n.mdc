@@ -1,0 +1,6 @@
+---
+description: i18n rules
+globs: apps/**/*.tsx,apps/*/messages/**,core/messages/**,packages/ui/**
+---
+
+- Every UI string comes from a catalog (`core/messages` for the shell, `apps/<m>/messages` next to module.json) via `t()`; en is the default and holds every key; ship en and de (check-i18n).

@@ -18,8 +18,8 @@ This file is a map. Anything checkable is a CI gate; when prose and a check disa
 | Path | What |
 | --- | --- |
 | `apps/web` | The one Next.js shell: navigation, admin pages (`/admin`, `/admin/logs`, `/admin/data-flow`) |
-| `apps/<module>` | Feature module: `module.json`, `MODULE.md`, `AGENTS.md`, `migrations/`, `src/functions.ts`, `src/page.tsx`, `tests/`, `e2e/` |
-| `core/` | Vendored `@homegrown/core`, read-only (CI). ctx.db, ctx.log, auth, registry, migrations, PWA, data-flow |
+| `apps/<module>` | Feature module: `module.json`, `messages/{en,de}.json`, `MODULE.md`, `AGENTS.md`, `migrations/`, `src/functions.ts`, `src/page.tsx`, `tests/`, `e2e/` |
+| `core/` | Vendored `@homegrown/core`, read-only (CI). ctx.db, ctx.log, auth, i18n, registry, migrations, PWA, data-flow |
 | `packages/ui` | `@homegrown/ui`: tokens and components, responsive by default |
 | `packages/deploy-agent` | NAS-side pull deploys; the only holder of prod credentials |
 | `tools/harness/` | Every CI check, lint/test/e2e config |
@@ -33,6 +33,8 @@ This file is a map. Anything checkable is a CI gate; when prose and a check disa
 - Functions: `const fn = defineFunctions<DB, Calls>()`; handlers get `ctx.db`, `ctx.log`, `ctx.auth`, `ctx.modules`.
 - Cross-module calls only via `ctx.modules.<module>.<capability>`; the generated client only exposes declared calls.
 - Identity: `ctx.auth.currentMember()`. Other data is referenced only by core member ids.
+- UI text: `const t = await getT("<module>")` in pages, `translator(messages)` in client views (messages passed as a prop).
+  Locale = member override, else household default (asked on first setup), else English.
 
 ## Commands
 
@@ -74,8 +76,9 @@ Vendored at a pinned SHA (`harness.lock.json`): `.cursor/skills/vendor-superpowe
 4. PWA installable; every declared offline route passes with the network off.
 5. check-data-flow green; `/admin/data-flow` reflects the change.
 6. No `console.*`; errors go through `ctx.log` with a correlation id.
-7. Diff review PASS within 2 rounds, else abort, open an issue, ping the owner.
-8. All CI gates green; evidence links point at CI artifacts, never at claims.
+7. Every UI string is a catalog key present in `en` (and translated in `de`); check-i18n green.
+8. Diff review PASS within 2 rounds, else abort, open an issue, ping the owner.
+9. All CI gates green; evidence links point at CI artifacts, never at claims.
 
 ## Fail closed
 
@@ -93,4 +96,5 @@ The stop hook writes a run record (outcome, stage, failure signature, one-line f
 
 ## Copy and data
 
-UI copy de-DE; code, docs and commits English. No real household data or secrets anywhere, including PR bodies.
+English is the default language; every module ships `messages/en.json` and `messages/de.json`. Code, docs and
+commits English. No real household data or secrets anywhere, including PR bodies.

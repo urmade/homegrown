@@ -18,7 +18,7 @@
     "e2e": "playwright test -c tools/harness/playwright.config.ts",
     "gen:docs": "tsx tools/harness/gen-docs.ts",
     "knip": "knip -c tools/harness/knip.json",
-    "harness:static": "tsx tools/harness/check-core.ts && tsx tools/harness/check-manifest.ts && tsx tools/harness/gen-docs.ts --check && tsx tools/harness/check-migrations.ts && tsx tools/harness/check-plan.ts && tsx tools/harness/check-evidence.ts && tsx tools/harness/check-tests.ts && tsx tools/harness/check-module-agents.ts && tsx tools/harness/check-design.ts && tsx tools/harness/check-secrets.ts"
+    "harness:static": "tsx tools/harness/check-core.ts && tsx tools/harness/check-manifest.ts && tsx tools/harness/gen-docs.ts --check && tsx tools/harness/check-migrations.ts && tsx tools/harness/check-plan.ts && tsx tools/harness/check-evidence.ts && tsx tools/harness/check-tests.ts && tsx tools/harness/check-module-agents.ts && tsx tools/harness/check-design.ts && tsx tools/harness/check-i18n.ts && tsx tools/harness/check-secrets.ts"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

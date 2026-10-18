@@ -46,6 +46,8 @@ jobs:
       - run: pnpm exec tsx tools/harness/check-tests.ts
       - run: pnpm exec tsx tools/harness/check-module-agents.ts
       - run: pnpm exec tsx tools/harness/check-design.ts
+      - name: check-i18n (every UI string from a catalog; every key exists in en)
+        run: pnpm exec tsx tools/harness/check-i18n.ts
       - run: pnpm exec tsx tools/harness/check-secrets.ts
       - name: knip (unused files, exports, dependencies)
         run: pnpm exec knip -c tools/harness/knip.json

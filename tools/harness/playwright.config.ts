@@ -6,6 +6,7 @@ export default defineConfig({
   testDir: root,
   testMatch: ["tools/harness/e2e/**/*.spec.ts", "apps/*/e2e/**/*.spec.ts"],
   outputDir: `${root}test-results`,
+  globalSetup: `${root}tools/harness/e2e/first-setup.ts`,
   fullyParallel: false,
   workers: 1,
   retries: 1,
