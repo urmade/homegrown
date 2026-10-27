@@ -136,7 +136,8 @@ test("ux.ui.dialog App-info native dialog has an accessible name and closes on o
   await expect(dialog).toHaveAccessibleName("App info");
   const box = await dialog.evaluate((el) => el.getBoundingClientRect());
   expect(box.height).toBeLessThanOrEqual(852);
-  await page.locator("dialog").evaluate((el) => el.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+  await page.locator("dialog").click({ position: { x: 8, y: 8 } });
+  await expect(dialog).toBeHidden();
 });
 
 test("ux.a18.axe no serious or critical on shell routes light and dark", async ({ page }) => {

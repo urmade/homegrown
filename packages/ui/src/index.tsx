@@ -83,20 +83,17 @@ type ButtonVariant = "primary" | "secondary" | "ghost";
 
 export function Button({
   variant = "primary",
-  size = "md",
   className,
   disabled,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; size?: "md" | "sm" }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant }) {
   return (
     <button
       {...props}
       disabled={disabled}
       aria-disabled={disabled || undefined}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-[var(--hg-radius-md)] text-[length:var(--hg-text-callout)] leading-5 font-semibold transition-[opacity,background-color] duration-[var(--hg-dur-fast)] disabled:opacity-40",
-        !className?.includes("whitespace-") && "whitespace-nowrap",
-        size === "md" ? "h-11 px-4" : "h-9 min-h-11 px-3",
+        "inline-flex h-11 items-center justify-center gap-2 rounded-[var(--hg-radius-md)] px-4 text-[length:var(--hg-text-callout)] leading-5 font-semibold whitespace-nowrap transition-[opacity,background-color] duration-[var(--hg-dur-fast)] disabled:opacity-40",
         variant === "primary" && "bg-primary text-on-primary",
         variant === "secondary" && "border border-border-strong bg-surface text-fg",
         variant === "ghost" && "bg-transparent text-primary",
@@ -210,32 +207,22 @@ export function EmptyState({ children }: { children: ReactNode }) {
   return <p className="rounded-hg border border-dashed border-border p-6 text-center text-base text-fg-muted">{children}</p>;
 }
 
-export function Banner({
-  children,
-  tone = "neutral",
-  action,
-}: {
-  children: ReactNode;
-  tone?: "neutral" | "danger" | "warning";
-  action?: ReactNode;
-}) {
+export function Banner({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "danger" }) {
   return (
     <p
       role="status"
       className={cn(
         "flex items-center gap-3 rounded-[var(--hg-radius-md)] px-3 py-2 text-sm",
         tone === "danger" && "bg-danger/10 text-danger",
-        tone === "warning" && "bg-warn/10 text-warn",
         tone === "neutral" && "bg-surface-sunken text-fg-muted",
       )}
     >
       <span className="min-w-0 flex-1">{children}</span>
-      {action}
     </p>
   );
 }
 
-export function Notice(props: { children: ReactNode; tone?: "neutral" | "danger" | "warning"; action?: ReactNode }) {
+export function Notice(props: { children: ReactNode; tone?: "neutral" | "danger" }) {
   return <Banner {...props} />;
 }
 

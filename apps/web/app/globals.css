@@ -100,14 +100,31 @@ html {
 
 .hg-more-dialog {
   position: fixed;
-  inset: auto 0 0;
+  inset: 0;
   z-index: var(--hg-z-dialog);
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+}
+
+/* Panel styles stay off <dialog> so UA display / modal trap stay intact.
+   The transparent dialog is the overlay hit target. */
+.hg-more-dialog-body {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
   max-height: 100dvh;
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
+  flex-direction: column;
   overflow: auto;
-  border: 0;
   border-radius: var(--hg-radius-xl) var(--hg-radius-xl) 0 0;
   background: var(--hg-surface-raised);
   color: var(--hg-text);
@@ -118,20 +135,14 @@ html {
   padding-left: max(1rem, env(safe-area-inset-left, 0px));
 }
 
-/* Layout lives on the inner box so we never override <dialog> display (that
-   breaks the UA closed state and the modal focus trap). */
-.hg-more-dialog-body {
-  display: flex;
-  flex-direction: column;
-}
-
 .hg-more-dialog::backdrop {
   background: rgba(0, 0, 0, 0.4);
 }
 
 @media (min-width: 768px) {
-  .hg-more-dialog {
+  .hg-more-dialog-body {
     inset: 0;
+    height: fit-content;
     margin: auto;
     border-radius: var(--hg-radius);
   }

@@ -74,6 +74,7 @@ export function MoreView({
         ref={dialog}
         className="hg-more-dialog"
         aria-labelledby="hg-app-info-title"
+        closedby="any"
         onClose={() => {
           setInfo(false);
           trigger.current?.focus();
