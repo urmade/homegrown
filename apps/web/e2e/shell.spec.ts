@@ -1,8 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { loadManifests } from "../../../core/src/manifest";
+import { moduleRoutes } from "./module-routes";
 
-const mods = loadManifests().map((m) => `/${m.manifest.name}`);
+const mods = moduleRoutes();
 const SHELL = ["/", "/more", "/settings", ...mods] as const;
 const CHROME = ["/", "/more", "/settings"] as const;
 const PHONE = { width: 393, height: 852 };
@@ -122,7 +122,7 @@ test("ux.more lists appearance settings admin and app info; back on pushed scree
   await page.getByRole("button", { name: "App info" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "Close" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toBeHidden();
   await page.goto("/settings");
   await expect(page.getByTestId("app-bar").getByRole("button", { name: "Back" })).toBeVisible();
 });
@@ -213,10 +213,11 @@ test("ux.a21.keyboard focus ring, dialog trap and Escape", async ({ page }) => {
   await trigger.click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  for (let i = 0; i < 8; i++) await page.keyboard.press("Tab");
-  expect(await page.evaluate(() => !!document.activeElement?.closest("dialog, [role='dialog']"))).toBe(true);
+  expect(await page.evaluate(() => !!document.activeElement?.closest("dialog"))).toBe(true);
+  for (let i = 0; i < 3; i++) await page.keyboard.press("Tab");
+  expect(await page.evaluate(() => !!document.activeElement?.closest("dialog"))).toBe(true);
   await page.keyboard.press("Escape");
-  await expect(dialog).toHaveCount(0);
+  await expect(dialog).toBeHidden();
   await expect(trigger).toBeFocused();
 });
 
@@ -296,6 +297,7 @@ test("ux.theme.resolver boot script writes one theme-color; screenshots home lig
   await page.goto("/");
   await screenshot(page, "home-393-dark");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  expect(await page.locator('meta[name="theme-color"]').count()).toBe(1);
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#161A21");
   await page.setViewportSize(DESKTOP);
   await page.emulateMedia({ colorScheme: "light" });

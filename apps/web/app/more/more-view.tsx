@@ -88,7 +88,7 @@ export function MoreView({
         </h2>
         <p className="mt-3 text-base">{appInfoText}</p>
         <div className="mt-4 flex justify-end">
-          <Button variant="ghost" onClick={() => dialog.current?.close()}>
+          <Button type="button" variant="ghost" onClick={() => dialog.current?.close()}>
             {copy.close}
           </Button>
         </div>

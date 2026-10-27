@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
-import { loadManifests } from "../../../core/src/manifest";
+import { moduleRoutes } from "./module-routes";
 
-const mods = loadManifests().map((m) => `/${m.manifest.name}`);
+const mods = moduleRoutes();
 const ROUTES = ["/", "/settings", "/admin", "/admin/logs", "/admin/data-flow", "/offline", "/setup", "/more", ...mods];
 const PHONES = [
   { w: 393, h: 852 },
