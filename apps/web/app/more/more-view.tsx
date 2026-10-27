@@ -81,16 +81,34 @@ export function MoreView({
         onClick={(e) => {
           if (e.target === e.currentTarget) e.currentTarget.close();
         }}
+        onKeyDown={(e) => {
+          if (e.key !== "Tab") return;
+          const nodes = [
+            ...e.currentTarget.querySelectorAll<HTMLElement>("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])"),
+          ].filter((el) => !el.hasAttribute("disabled"));
+          if (nodes.length === 0) return;
+          const first = nodes[0]!;
+          const last = nodes[nodes.length - 1]!;
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }}
       >
-        <div className="mx-auto mb-3 h-[5px] w-9 rounded-full bg-border-strong md:hidden" />
-        <h2 id="hg-app-info-title" className="text-[length:var(--hg-text-headline)] font-bold">
-          {copy.appInfo}
-        </h2>
-        <p className="mt-3 text-base">{appInfoText}</p>
-        <div className="mt-4 flex justify-end">
-          <Button type="button" variant="ghost" onClick={() => dialog.current?.close()}>
-            {copy.close}
-          </Button>
+        <div className="hg-more-dialog-body">
+          <div className="mx-auto mb-3 h-[5px] w-9 rounded-full bg-border-strong md:hidden" />
+          <h2 id="hg-app-info-title" className="text-[length:var(--hg-text-headline)] font-bold">
+            {copy.appInfo}
+          </h2>
+          <p className="mt-3 text-base">{appInfoText}</p>
+          <div className="mt-4 flex justify-end">
+            <Button type="button" variant="ghost" onClick={() => dialog.current?.close()}>
+              {copy.close}
+            </Button>
+          </div>
         </div>
       </dialog>
     </div>

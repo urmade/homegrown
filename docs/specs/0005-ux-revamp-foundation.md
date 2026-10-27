@@ -74,7 +74,7 @@ Offline: registered module routes stay as declared (network-first; shopping writ
   - Tablet shows both a 232px sidebar and a tab bar: 768–1023 is a 72px rail; tabs only under 768 (`ux.a3.tabbar`, `ux.a4.sidebar`).
   - Hit targets shrink below 44px or inputs zoom on iOS: 44px controls, 16px fields (`ux.a19.hit`, `ux.a20.input`, `mobile.tap-targets`).
   - Dialog Tab escapes to the page or Esc does nothing: trap + Esc + restore focus (`ux.a21.keyboard`, `ux.ui.dialog`).
-  - Closed App-info stays painted because `.hg-more-dialog { display: flex }` overrides the UA `display: none`: flex is applied only on `[open]` (`ux.more`, `ux.a21.keyboard`).
+  - Closed App-info stays painted, or Tab escapes, because `display` on `<dialog>` overrides the UA closed state and the modal trap: layout flex lives on an inner box (`ux.more`, `ux.a21.keyboard`).
   - App-info `Dialog` sits under the notch or home indicator: pad with `env(safe-area-inset-*)` and cap at `100dvh` (`ux.ui.dialog`, `mobile.dialog-fit`).
   - Reduced-motion users get overlay transforms: honour `prefers-reduced-motion` on the Dialog (`ux.ui.dialog`).
   - Placeholder-only fields fail labels / axe: TextField/Select require a label prop (`ux.ui.fields`, `ux.a18.axe`).

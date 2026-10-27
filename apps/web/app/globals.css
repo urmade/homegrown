@@ -106,7 +106,6 @@ html {
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
-  flex-direction: column;
   overflow: auto;
   border: 0;
   border-radius: var(--hg-radius-xl) var(--hg-radius-xl) 0 0;
@@ -119,9 +118,11 @@ html {
   padding-left: max(1rem, env(safe-area-inset-left, 0px));
 }
 
-/* Flex only while open; a closed <dialog> must keep the UA display:none. */
-.hg-more-dialog[open] {
+/* Layout lives on the inner box so we never override <dialog> display (that
+   breaks the UA closed state and the modal focus trap). */
+.hg-more-dialog-body {
   display: flex;
+  flex-direction: column;
 }
 
 .hg-more-dialog::backdrop {
