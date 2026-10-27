@@ -3,6 +3,22 @@
 @source "../../../packages/ui/src";
 @source "../../../apps/*/src";
 
+:root {
+  --hg-tab-stack: 0px;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --hg-tab-stack: calc(2.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  html,
+  body {
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
 html {
   background: var(--color-bg);
   color: var(--color-fg);
@@ -21,7 +37,7 @@ html {
 
 .hg-safe-main {
   padding-top: 1.5rem;
-  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  padding-bottom: 1.5rem;
   padding-left: max(1rem, env(safe-area-inset-left, 0px));
   padding-right: max(1rem, env(safe-area-inset-right, 0px));
 }
@@ -32,6 +48,12 @@ html {
   }
 }
 
+@media (min-width: 768px) {
+  .hg-safe-main {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .hg-safe-sheet {
   padding-top: max(1rem, env(safe-area-inset-top, 0px));
   padding-right: max(1rem, env(safe-area-inset-right, 0px));
@@ -39,8 +61,14 @@ html {
   padding-left: max(1rem, env(safe-area-inset-left, 0px));
 }
 
+.hg-safe-tabs {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: max(0.25rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.25rem, env(safe-area-inset-right, 0px));
+}
+
 .hg-safe-toast {
   left: max(1rem, env(safe-area-inset-left, 0px));
   right: max(1rem, env(safe-area-inset-right, 0px));
-  bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  bottom: max(calc(1rem + var(--hg-tab-stack)), env(safe-area-inset-bottom, 0px));
 }
