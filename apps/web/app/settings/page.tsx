@@ -3,7 +3,7 @@ import { getT, householdLocale, LOCALES, memberLocale } from "../../lib/server";
 import { requireSetup } from "../../lib/setup";
 import { chooseHouseholdLocale, chooseMemberLocale } from "./actions";
 
-const selectClass = "min-h-11 w-full rounded-hg border border-border bg-surface px-3";
+const selectClass = "min-h-11 w-full rounded-hg border border-border bg-surface px-3 text-base text-fg";
 
 export default async function Settings() {
   await requireSetup();
