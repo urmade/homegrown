@@ -12,8 +12,22 @@ const { deploy, isGreen } = await import("../src/agent");
 const SHA = "abc1234def5678";
 const PREV = "0001111222333444555666777888999aaabbbccc";
 
-function fakeIO(prodHealthy: boolean, stagingFails = false) {
-  const calls = { git: [] as string[][], compose: [] as string[][], sql: [] as { text: string; params?: unknown[] }[], github: [] as { path: string; body?: string }[], dumps: [] as string[] };
+function migrateFail(message: string, stderr: string) {
+  return Object.assign(new Error(message), { stderr, stdout: "" });
+}
+
+function fakeIO(
+  prodHealthy: boolean,
+  stagingFails: boolean | Error = false,
+  openReverts: { number: number; head: { ref: string } }[] = [],
+) {
+  const calls = {
+    git: [] as string[][],
+    compose: [] as string[][],
+    sql: [] as { text: string; params?: unknown[] }[],
+    github: [] as { path: string; body?: string }[],
+    dumps: [] as string[],
+  };
   const io = {
     git: (...args: string[]) => {
       calls.git.push(args);
@@ -25,20 +39,23 @@ function fakeIO(prodHealthy: boolean, stagingFails = false) {
       calls.compose.push([tag, ...args]);
       return "";
     },
-    sql: async <T,>(text: string, params?: unknown[]) => {
+    sql: async <T>(text: string, params?: unknown[]) => {
       calls.sql.push({ text, params });
       return (text.includes("from logs.logs") ? [{ msg: "fn.failed", error: "boom in pantry.listItems" }] : []) as T[];
     },
     healthy: async () => prodHealthy,
     github: async (path: string, init?: RequestInit) => {
       calls.github.push({ path, body: init?.body as string | undefined });
-      return path.endsWith("/pulls") && !init ? [{ number: 7 }] : {};
+      if (path.startsWith("/commits/") && path.endsWith("/pulls") && !init?.method) return [{ number: 7 }];
+      if (path.startsWith("/pulls?") && !init?.method) return openReverts;
+      return {};
     },
     dump: (label: string) => {
       calls.dumps.push(label);
       return `${label}.dump`;
     },
     rehearse: async () => {
+      if (stagingFails instanceof Error) throw stagingFails;
       if (stagingFails) throw new Error("staging smoke failed");
     },
   };
@@ -108,5 +125,97 @@ describe("deploy agent", () => {
     expect(await isGreen("s", runs(["completed", "failure", "2026-01-01T10:00:00Z"], ["completed", "success", "2026-01-01T11:00:00Z"]))).toBe(true);
     expect(await isGreen("s", runs(["completed", "success", "2026-01-01T10:00:00Z"], ["completed", "cancelled", "2026-01-01T11:00:00Z"]))).toBe(false);
     expect(await isGreen("s", runs(["completed", "success", "2026-01-01T10:00:00Z"], ["completed", "action_required", "2026-01-01T11:00:00Z"]))).toBe(true);
+  });
+
+  it("deploy.staging-error-tail staging_failed and stdout keep the migrate file and Postgres message", async () => {
+    const password = ["s3cret", "PW"].join("");
+    const url = `postgres://postgres:${password}@db:5432/homegrown_staging`;
+    const pad = "x".repeat(400);
+    const thrown = migrateFail(
+      `Command failed: docker compose run --rm -e MIGRATE_DATABASE_URL=${url} migrate\n${pad}`,
+      "shopping-list/0002_lists.sql: permission denied for schema shopping_list\n    at migrate.ts:75",
+    );
+    const writes: string[] = [];
+    const orig = process.stdout.write.bind(process.stdout);
+    process.stdout.write = ((chunk: unknown, ...rest: unknown[]) => {
+      writes.push(String(chunk));
+      return (orig as (c: unknown, ...r: unknown[]) => boolean)(chunk, ...rest);
+    }) as typeof process.stdout.write;
+    const { io, calls } = fakeIO(true, thrown);
+    try {
+      expect(await deploy("eee5555ddd", PREV, io)).toBe(false);
+    } finally {
+      process.stdout.write = orig;
+    }
+    const event = calls.sql.find((q) => q.params?.[0] === "staging_failed");
+    const detail = event?.params?.[2] as { error?: string };
+    const logged = writes.join("\n");
+    expect(detail?.error).toContain("shopping-list/0002_lists.sql");
+    expect(detail?.error).toContain("permission denied for schema shopping_list");
+    expect(logged).toContain("shopping-list/0002_lists.sql");
+    expect(logged).toContain("permission denied for schema shopping_list");
+  });
+
+  it("deploy.redact-credentials command errors drop URL passwords and tokens before events and stdout", async () => {
+    const password = ["s3cret", "PW"].join("");
+    const token = "ghp_" + "a".repeat(36);
+    process.env.POSTGRES_PASSWORD = password;
+    process.env.GITHUB_TOKEN = token;
+    const url = `postgres://postgres:${password}@db:5432/homegrown_staging`;
+    const thrown = migrateFail(
+      `Command failed: docker compose run --rm -e MIGRATE_DATABASE_URL=${url} git https://x-access-token:${token}@github.com/household/homegrown.git migrate`,
+      `connection to ${url} failed; token ${token}`,
+    );
+    const writes: string[] = [];
+    const orig = process.stdout.write.bind(process.stdout);
+    process.stdout.write = ((chunk: unknown, ...rest: unknown[]) => {
+      writes.push(String(chunk));
+      return (orig as (c: unknown, ...r: unknown[]) => boolean)(chunk, ...rest);
+    }) as typeof process.stdout.write;
+    const { io, calls } = fakeIO(true, thrown);
+    try {
+      expect(await deploy("eee5555ddd", PREV, io)).toBe(false);
+    } finally {
+      process.stdout.write = orig;
+      process.env.GITHUB_TOKEN = "test-token";
+      delete process.env.POSTGRES_PASSWORD;
+    }
+    const event = calls.sql.find((q) => q.params?.[0] === "staging_failed");
+    const text = `${JSON.stringify(event?.params?.[2])}\n${writes.join("\n")}`;
+    expect(text).not.toContain(password);
+    expect(text).not.toContain(token);
+    expect(text).not.toMatch(/postgres(?:ql)?:\/\/[^:\s/]+:[^@*\s]+@/);
+  });
+
+  it("deploy.revert-restores-checkout leaves the repo on the deploy SHA after revert success or failure", async () => {
+    const SHA = "eee5555ddd";
+    const { io, calls } = fakeIO(true, true);
+    expect(await deploy(SHA, PREV, io)).toBe(false);
+    const checkouts = calls.git.filter((a) => a.includes("checkout"));
+    expect(checkouts.at(-1)).toEqual(["checkout", "--quiet", "--detach", SHA]);
+
+    const failing = fakeIO(true, true);
+    failing.io.git = (...args: string[]) => {
+      failing.calls.git.push(args);
+      if (args[0] === "commit") throw new Error("commit failed");
+      if (args[0] === "diff") return "diff --git a/x b/x";
+      if (args[0] === "show") return "# owners\n/AGENTS.md  @o\n/tools/harness/  @o\n";
+      return "";
+    };
+    expect(await deploy(SHA, PREV, failing.io)).toBe(false);
+    expect(failing.calls.git.filter((a) => a.includes("checkout")).at(-1)).toEqual(["checkout", "--quiet", "--detach", SHA]);
+  });
+
+  it("deploy.revert-closes-superseded opening a revert PR closes older open revert/* PRs only", async () => {
+    const SHA = "eee5555ddd";
+    const { io, calls } = fakeIO(true, true, [
+      { number: 101, head: { ref: "revert/aaaaaaa" } },
+      { number: 102, head: { ref: "feat/other" } },
+      { number: 103, head: { ref: "revert/eee5555" } },
+    ]);
+    expect(await deploy(SHA, PREV, io)).toBe(false);
+    expect(calls.github.find((g) => g.path === "/pulls/101")?.body).toContain('"state":"closed"');
+    expect(calls.github.some((g) => g.path === "/pulls/102")).toBe(false);
+    expect(calls.github.some((g) => g.path === "/pulls/103")).toBe(false);
   });
 });

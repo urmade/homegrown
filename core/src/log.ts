@@ -20,15 +20,29 @@ export interface LogSink {
 }
 
 // Redaction runs before any sink: secrets, credentials, request payloads and personal data never leave the process.
-const REDACT = /pass|secret|token|key|auth|cookie|session|credential|content|body|payload|input|output|email|phone|address|name|title|note/i;
+const REDACT =
+  /pass|secret|token|key|auth|cookie|session|credential|content|body|payload|input|output|email|phone|address|name|title|note/i;
 const KEEP = new Set(["stack", "table", "columns", "capability", "durationMs", "status", "route", "count", "sha", "error"]);
+
+function redactSecretsInText(text: string): string {
+  let out = text.replace(/postgres(?:ql)?:\/\/([^:/?#\s]+):([^@\s]+)@/gi, "postgres://$1:***@");
+  out = out.replace(/x-access-token:[^@\s]+@/g, "x-access-token:***@");
+  out = out.replace(/Bearer\s+[A-Za-z0-9._-]+/g, "Bearer ***");
+  for (const key of ["POSTGRES_PASSWORD", "APP_DB_PASSWORD", "GITHUB_TOKEN", "DATABASE_URL", "MIGRATE_DATABASE_URL"]) {
+    const v = process.env[key];
+    if (v && v.length >= 4) out = out.split(v).join("***");
+  }
+  return out;
+}
 
 export function redact(data: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(data)) {
     if (!KEEP.has(k) && REDACT.test(k)) out[k] = "[redacted]";
-    else if (typeof v === "string") out[k] = v.length > 2000 ? `${v.slice(0, 2000)}…` : v;
-    else if (v && typeof v === "object" && !Array.isArray(v)) out[k] = redact(v as Record<string, unknown>);
+    else if (typeof v === "string") {
+      const s = redactSecretsInText(v);
+      out[k] = s.length > 2000 ? `${s.slice(0, 2000)}…` : s;
+    } else if (v && typeof v === "object" && !Array.isArray(v)) out[k] = redact(v as Record<string, unknown>);
     else out[k] = v;
   }
   return out;
@@ -74,7 +88,9 @@ export function otelSink(endpoint: string): LogSink {
       const res = await fetch(`${endpoint.replace(/\/$/, "")}/v1/logs`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ resourceLogs: [{ resource: { attributes: [attr("service.name", "homegrown")] }, scopeLogs: [{ logRecords }] }] }),
+        body: JSON.stringify({
+          resourceLogs: [{ resource: { attributes: [attr("service.name", "homegrown")] }, scopeLogs: [{ logRecords }] }],
+        }),
         signal: AbortSignal.timeout(5000),
       });
       if (!res.ok) throw new Error(`otlp ${res.status}`);
@@ -108,9 +124,7 @@ class Batcher {
     this.timer = undefined;
     const batch = this.buf.splice(0);
     if (batch.length === 0) return;
-    await Promise.all(
-      this.sinks.map((s) => s.write(batch).catch(() => (s === stdoutSink ? undefined : stdoutSink.write(batch)))),
-    );
+    await Promise.all(this.sinks.map((s) => s.write(batch).catch(() => (s === stdoutSink ? undefined : stdoutSink.write(batch)))));
   }
 }
 
@@ -145,5 +159,9 @@ export const log: Logger = {
   debug: (m, d) => emit("debug", m, d),
 };
 
-export const errorData = (e: unknown) =>
-  e instanceof Error ? { error: e.message.slice(0, 500), stack: e.stack } : { error: String(e).slice(0, 500) };
+export const errorData = (e: unknown) => {
+  const raw = e instanceof Error ? e.message : String(e);
+  return e instanceof Error
+    ? { error: redactSecretsInText(raw).slice(0, 500), stack: e.stack ? redactSecretsInText(e.stack) : e.stack }
+    : { error: redactSecretsInText(raw).slice(0, 500) };
+};

@@ -17,11 +17,50 @@ const BACKUPS = env.HG_BACKUPS ?? "/backups";
 const STATE = join(BACKUPS, ".deployed");
 const ownerUrl = (db = "homegrown") => `postgres://postgres:${env.POSTGRES_PASSWORD}@db:5432/${db}`;
 
-const say = (msg: string, data: Record<string, unknown> = {}) =>
-  process.stdout.write(`${JSON.stringify({ time: new Date().toISOString(), level: "info", module: "deploy-agent", msg, ...data })}\n`);
+/** Strip connection passwords and known secret env values before they reach events or stdout. */
+export function redactSecrets(text: string): string {
+  let out = text.replace(/postgres(?:ql)?:\/\/([^:/?#\s]+):([^@\s]+)@/gi, "postgres://$1:***@");
+  out = out.replace(/x-access-token:[^@\s]+@/g, "x-access-token:***@");
+  out = out.replace(/Bearer\s+[A-Za-z0-9._-]+/g, "Bearer ***");
+  for (const key of ["POSTGRES_PASSWORD", "APP_DB_PASSWORD", "GITHUB_TOKEN", "DATABASE_URL", "MIGRATE_DATABASE_URL"]) {
+    const v = env[key];
+    if (v && v.length >= 4) out = out.split(v).join("***");
+  }
+  return out;
+}
 
-const run = (cmd: string, args: string[], extra: Record<string, string> = {}) =>
-  execFileSync(cmd, args, { cwd: REPO, encoding: "utf8", env: { ...env, ...extra }, stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 << 20 }).trim();
+function redactRecord(data: Record<string, unknown>) {
+  const safe: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(data)) safe[k] = typeof v === "string" ? redactSecrets(v) : v;
+  return safe;
+}
+
+const say = (msg: string, data: Record<string, unknown> = {}) =>
+  process.stdout.write(
+    `${JSON.stringify({ time: new Date().toISOString(), level: "info", module: "deploy-agent", msg, ...redactRecord(data) })}\n`,
+  );
+
+/** Prefer the stderr tail (module/file + Postgres) over the command line that execFileSync puts first. */
+export function errorText(err: unknown): string {
+  const e = err as { message?: string; stderr?: string | Buffer; stdout?: string | Buffer };
+  const std = (v: string | Buffer | undefined) => (typeof v === "string" ? v : Buffer.isBuffer(v) ? v.toString("utf8") : "");
+  const tail = (std(e.stderr).trim() || std(e.stdout).trim() || e.message || String(err)).trim();
+  return redactSecrets(tail.slice(-2000));
+}
+
+const run = (cmd: string, args: string[], extra: Record<string, string> = {}) => {
+  try {
+    return execFileSync(cmd, args, {
+      cwd: existsSync(REPO) ? REPO : process.cwd(),
+      encoding: "utf8",
+      env: { ...env, ...extra },
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 64 << 20,
+    }).trim();
+  } catch (e) {
+    throw new Error(errorText(e), { cause: e });
+  }
+};
 
 async function sql<T = Record<string, unknown>>(text: string, params: unknown[] = [], db = "homegrown"): Promise<T[]> {
   const c = new pg.Client({ connectionString: ownerUrl(db) });
@@ -37,7 +76,11 @@ async function github(path: string, init: RequestInit = {}) {
   if (!env.GITHUB_REPO) return null;
   const res = await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}${path}`, {
     ...init,
-    headers: { accept: "application/vnd.github+json", ...(env.GITHUB_TOKEN ? { authorization: `Bearer ${env.GITHUB_TOKEN}` } : {}), ...init.headers },
+    headers: {
+      accept: "application/vnd.github+json",
+      ...(env.GITHUB_TOKEN ? { authorization: `Bearer ${env.GITHUB_TOKEN}` } : {}),
+      ...init.headers,
+    },
     signal: AbortSignal.timeout(10_000),
   });
   return res.ok ? res.json() : null;
@@ -75,13 +118,27 @@ const io: IO = {
 };
 
 const event = (x: IO, kind: string, sha: string, detail: Record<string, unknown> = {}) =>
-  x.sql("insert into core.events (kind, sha, detail) values ($1, $2, $3)", [kind, sha, detail]).catch(() => []);
+  x.sql("insert into core.events (kind, sha, detail) values ($1, $2, $3)", [kind, sha, redactRecord(detail)]).catch(() => []);
 
 async function report(x: IO, sha: string, ok: boolean, text: string) {
   if (!env.GITHUB_TOKEN) return;
-  await x.github(`/statuses/${sha}`, { method: "POST", body: JSON.stringify({ state: ok ? "success" : "failure", context: "homegrown/deploy", description: text.slice(0, 140) }) });
+  await x.github(`/statuses/${sha}`, {
+    method: "POST",
+    body: JSON.stringify({ state: ok ? "success" : "failure", context: "homegrown/deploy", description: text.slice(0, 140) }),
+  });
   const prs = ((await x.github(`/commits/${sha}/pulls`)) as { number: number }[] | null) ?? [];
   for (const pr of prs) await x.github(`/issues/${pr.number}/comments`, { method: "POST", body: JSON.stringify({ body: text }) });
+}
+
+async function closeSupersededReverts(x: IO, keep: string) {
+  const prs = await x.github("/pulls?state=open&per_page=100");
+  if (!Array.isArray(prs)) return;
+  for (const pr of prs as { number?: number; head?: { ref?: string } }[]) {
+    const ref = pr.head?.ref ?? "";
+    if (typeof pr.number === "number" && ref.startsWith("revert/") && ref !== keep) {
+      await x.github(`/pulls/${pr.number}`, { method: "PATCH", body: JSON.stringify({ state: "closed" }) });
+    }
+  }
 }
 
 /**
@@ -91,41 +148,74 @@ async function report(x: IO, sha: string, ok: boolean, text: string) {
  */
 export async function revertOnMain(x: IO, sha: string, prev: string): Promise<string | null> {
   const branch = `revert/${sha.slice(0, 7)}`;
-  const remote = env.GITHUB_REPO && env.GITHUB_TOKEN ? `https://x-access-token:${env.GITHUB_TOKEN}@github.com/${env.GITHUB_REPO}.git` : "origin";
+  const remote =
+    env.GITHUB_REPO && env.GITHUB_TOKEN ? `https://x-access-token:${env.GITHUB_TOKEN}@github.com/${env.GITHUB_REPO}.git` : "origin";
   const base = /^[0-9a-f]{40}$/.test(prev) ? prev : `${sha}^`;
   try {
-    x.git("fetch", "--quiet", "origin", "main");
-    x.git("checkout", "--quiet", "--detach", "origin/main");
-    // Migrations stay: the schema is already applied, N-1 keeps the previous code compatible with it, and
-    // check-migrations rejects deleting applied migrations, which would leave the revert PR red forever.
-    // Harness paths (CODEOWNERS) stay too: they are not deployed, and touching them would make the revert
-    // PR a harness PR that waits for owner review instead of merging. The agent itself is not deployed by
-    // this process either, so its own code is never reverted for an app failure.
-    const harness = x
-      .git("show", "origin/main:.github/CODEOWNERS")
-      .split("\n")
-      .filter((l) => l.trim() && !l.trim().startsWith("#"))
-      .map((l) => `:(exclude)${l.trim().split(/\s+/)[0]!.replace(/^\//, "")}`);
-    const patch = x.git("diff", "--binary", sha, base, "--", ".", ":(exclude,glob)**/migrations/**", ":(exclude)packages/deploy-agent/", ...harness);
-    if (patch) {
-      const file = join(tmpdir(), `revert-${sha}.patch`);
-      writeFileSync(file, `${patch}\n`);
-      x.git("apply", "--index", "--3way", file);
-    }
-    x.git("-c", "user.name=homegrown-deploy-agent", "-c", "user.email=deploy-agent@homegrown.invalid", "commit", "--no-verify", "--allow-empty", "-m", `Revert ${base.slice(0, 7)}..${sha.slice(0, 7)} (red deploy; migrations kept)`);
-    x.git("push", "--quiet", remote, `HEAD:refs/heads/${branch}`);
-  } catch (e) {
     try {
-      x.git("reset", "--hard", "--quiet");
+      x.git("fetch", "--quiet", "origin", "main");
+      x.git("checkout", "--quiet", "--detach", "origin/main");
+      // Migrations stay: the schema is already applied, N-1 keeps the previous code compatible with it, and
+      // check-migrations rejects deleting applied migrations, which would leave the revert PR red forever.
+      // Harness paths (CODEOWNERS) stay too: they are not deployed, and touching them would make the revert
+      // PR a harness PR that waits for owner review instead of merging. The agent itself is not deployed by
+      // this process either, so its own code is never reverted for an app failure.
+      const harness = x
+        .git("show", "origin/main:.github/CODEOWNERS")
+        .split("\n")
+        .filter((l) => l.trim() && !l.trim().startsWith("#"))
+        .map((l) => `:(exclude)${l.trim().split(/\s+/)[0]!.replace(/^\//, "")}`);
+      const patch = x.git(
+        "diff",
+        "--binary",
+        sha,
+        base,
+        "--",
+        ".",
+        ":(exclude,glob)**/migrations/**",
+        ":(exclude)packages/deploy-agent/",
+        ...harness,
+      );
+      if (patch) {
+        const file = join(tmpdir(), `revert-${sha}.patch`);
+        writeFileSync(file, `${patch}\n`);
+        x.git("apply", "--index", "--3way", file);
+      }
+      x.git(
+        "-c",
+        "user.name=homegrown-deploy-agent",
+        "-c",
+        "user.email=deploy-agent@homegrown.invalid",
+        "commit",
+        "--no-verify",
+        "--allow-empty",
+        "-m",
+        `Revert ${base.slice(0, 7)}..${sha.slice(0, 7)} (red deploy; migrations kept)`,
+      );
+      x.git("push", "--quiet", remote, `HEAD:refs/heads/${branch}`);
+    } catch (e) {
+      try {
+        x.git("reset", "--hard", "--quiet");
+      } catch {}
+      say("revert.failed", { sha, error: errorText(e).slice(0, 300) });
+      return null;
+    }
+    const created = await x.github("/pulls", {
+      method: "POST",
+      body: JSON.stringify({
+        title: `Revert ${sha.slice(0, 7)}: red deploy`,
+        head: branch,
+        base: "main",
+        body: `The deploy of ${sha} failed (staging rehearsal or prod smoke); prod runs ${base.slice(0, 7)}. This reverts ${base.slice(0, 7)}..${sha.slice(0, 7)}, keeps migrations, and goes through the normal merge gate. Fix forward on a branch.`,
+      }),
+    });
+    if (created) await closeSupersededReverts(x, branch);
+    return branch;
+  } finally {
+    try {
+      x.git("checkout", "--quiet", "--detach", sha);
     } catch {}
-    say("revert.failed", { sha, error: String(e).slice(0, 300) });
-    return null;
   }
-  await x.github("/pulls", {
-    method: "POST",
-    body: JSON.stringify({ title: `Revert ${sha.slice(0, 7)}: red deploy`, head: branch, base: "main", body: `The deploy of ${sha} failed (staging rehearsal or prod smoke); prod runs ${base.slice(0, 7)}. This reverts ${base.slice(0, 7)}..${sha.slice(0, 7)}, keeps migrations, and goes through the normal merge gate. Fix forward on a branch.` }),
-  });
-  return branch;
 }
 
 export async function deploy(sha: string, prev: string, x: IO = io): Promise<boolean> {
@@ -135,9 +225,16 @@ export async function deploy(sha: string, prev: string, x: IO = io): Promise<boo
   try {
     await x.rehearse(sha);
   } catch (e) {
+    const reason = errorText(e);
+    say("staging.failed", { sha, error: reason });
     const revert = await revertOnMain(x, sha, prev);
-    await event(x, "staging_failed", sha, { error: String(e).slice(0, 500), revert });
-    await report(x, sha, false, `Staging rehearsal failed for ${sha.slice(0, 7)}; prod untouched. ${revert ? `Revert pushed to \`${revert}\`.` : "Revert the merge manually."}`);
+    await event(x, "staging_failed", sha, { error: reason, revert });
+    await report(
+      x,
+      sha,
+      false,
+      `Staging rehearsal failed for ${sha.slice(0, 7)}; prod untouched. ${revert ? `Revert pushed to \`${revert}\`.` : "Revert the merge manually."}`,
+    );
     return false;
   }
   x.dump("pre-promote");
@@ -176,14 +273,25 @@ export async function deploy(sha: string, prev: string, x: IO = io): Promise<boo
   return false;
 }
 
-type CiRun = { status: string; conclusion: string | null; event?: string; triggering_actor?: { login: string }; run_started_at?: string; created_at: string };
-const executed = (r: CiRun) => r.conclusion !== "action_required" && !(r.event === "pull_request" && r.triggering_actor?.login === "github-actions[bot]");
+type CiRun = {
+  status: string;
+  conclusion: string | null;
+  event?: string;
+  triggering_actor?: { login: string };
+  run_started_at?: string;
+  created_at: string;
+};
+const executed = (r: CiRun) =>
+  r.conclusion !== "action_required" && !(r.event === "pull_request" && r.triggering_actor?.login === "github-actions[bot]");
 
 /** Same rule as tools/harness/merge-gate.sh: the most recently started ci.yml run for the SHA completed with success. */
 export async function isGreen(sha: string, gh: IO["github"] = github): Promise<boolean> {
   if (!env.GITHUB_REPO) return env.HG_ALLOW_UNVERIFIED === "1";
   const data = (await gh(`/actions/workflows/ci.yml/runs?head_sha=${sha}&per_page=100`)) as { workflow_runs: CiRun[] } | null;
-  const latest = (data?.workflow_runs ?? []).filter(executed).sort((a, b) => (a.run_started_at ?? a.created_at).localeCompare(b.run_started_at ?? b.created_at)).at(-1);
+  const latest = (data?.workflow_runs ?? [])
+    .filter(executed)
+    .sort((a, b) => (a.run_started_at ?? a.created_at).localeCompare(b.run_started_at ?? b.created_at))
+    .at(-1);
   return latest?.status === "completed" && latest.conclusion === "success";
 }
 
@@ -202,7 +310,10 @@ function dump(label: string, db = "homegrown") {
 function rotate() {
   const keep: Record<string, number> = { daily: 7, weekly: 4, "pre-promote": 10 };
   for (const [label, n] of Object.entries(keep)) {
-    const files = readdirSync(BACKUPS).filter((f) => f.startsWith(`${label}-`)).sort().reverse();
+    const files = readdirSync(BACKUPS)
+      .filter((f) => f.startsWith(`${label}-`))
+      .sort()
+      .reverse();
     for (const f of files.slice(n)) unlinkSync(join(BACKUPS, f));
   }
 }
@@ -210,6 +321,11 @@ function rotate() {
 function latestDump() {
   const files = readdirSync(BACKUPS).filter((f) => f.endsWith(".dump"));
   return files.sort((a, b) => statSync(join(BACKUPS, b)).mtimeMs - statSync(join(BACKUPS, a)).mtimeMs)[0];
+}
+
+/** Same-cluster restore: keep dump owners so module roles can migrate existing schemas. */
+export function restoreDump(dumpFile: string, databaseUrl: string) {
+  run("pg_restore", ["-d", databaseUrl, dumpFile]);
 }
 
 async function rehearse(sha: string) {
@@ -220,7 +336,7 @@ async function rehearse(sha: string) {
   }
   await sql("drop database if exists homegrown_staging with (force)", [], "postgres");
   await sql("create database homegrown_staging", [], "postgres");
-  run("pg_restore", ["--no-owner", "--role=postgres", "-d", ownerUrl("homegrown_staging"), join(BACKUPS, latest)]);
+  restoreDump(join(BACKUPS, latest), ownerUrl("homegrown_staging"));
   io.compose(sha, "run", "--rm", "-e", `MIGRATE_DATABASE_URL=${ownerUrl("homegrown_staging")}`, "migrate");
   io.compose(sha, "--profile", "staging", "up", "-d", "--no-deps", "app-staging");
   try {
@@ -245,7 +361,10 @@ async function nightly() {
 // "<sha> <prev>" per line. Persisted so a restart never re-deploys a SHA that already failed.
 const FAILED = join(BACKUPS, ".failed");
 const failed = new Map<string, string>(
-  (existsSync(FAILED) ? readFileSync(FAILED, "utf8").split("\n").filter(Boolean) : []).map((l) => [l.split(" ")[0]!, l.split(" ")[1] ?? "local"]),
+  (existsSync(FAILED) ? readFileSync(FAILED, "utf8").split("\n").filter(Boolean) : []).map((l) => [
+    l.split(" ")[0]!,
+    l.split(" ")[1] ?? "local",
+  ]),
 );
 async function tick() {
   await nightly();
@@ -268,7 +387,7 @@ async function tick() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   for (;;) {
-    await tick().catch((e) => say("tick.failed", { error: String(e).slice(0, 500) }));
+    await tick().catch((e) => say("tick.failed", { error: errorText(e).slice(0, 500) }));
     if (env.HG_ONCE === "1") break;
     await new Promise((r) => setTimeout(r, 60_000));
   }
