@@ -209,14 +209,7 @@ export function EmptyState({ children }: { children: ReactNode }) {
 
 export function Banner({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "danger" }) {
   return (
-    <p
-      role="status"
-      className={cn(
-        "flex items-center gap-3 rounded-[var(--hg-radius-md)] px-3 py-2 text-sm",
-        tone === "danger" && "bg-danger/10 text-danger",
-        tone === "neutral" && "bg-surface-sunken text-fg-muted",
-      )}
-    >
+    <p role="status" data-tone={tone} className="hg-banner flex items-center gap-3 rounded-[var(--hg-radius-md)] px-3 py-2 text-sm">
       <span className="min-w-0 flex-1">{children}</span>
     </p>
   );

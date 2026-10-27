@@ -90,6 +90,7 @@ html {
 
 .hg-sw-toast {
   bottom: calc(1rem + var(--hg-tabbar) + env(safe-area-inset-bottom, 0px));
+  z-index: var(--hg-z-toast);
 }
 
 @media (min-width: 768px) {

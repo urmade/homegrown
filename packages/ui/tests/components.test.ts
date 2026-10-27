@@ -38,3 +38,12 @@ it("ux.ui.chrome SegmentedControl Banner EmptyState take copy as props", () => {
   expect(createElement(Notice, { children: "Offline" }).props.children).toBe("Offline");
   expect(createElement(EmptyState, { children: "Nothing here" }).props.children).toBe("Nothing here");
 });
+
+it("ux.toast-theme Banner uses hg-banner and data-tone without unthemed utilities", () => {
+  const el = Banner({ children: "Offline" });
+  expect(String(el.props.className)).toMatch(/hg-banner/);
+  expect(el.props["data-tone"]).toBe("neutral");
+  expect(String(el.props.className)).not.toMatch(/bg-surface|bg-danger/);
+  const danger = Banner({ children: "Err", tone: "danger" });
+  expect(danger.props["data-tone"]).toBe("danger");
+});
