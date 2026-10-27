@@ -9,3 +9,38 @@ html {
   font-family: var(--font-sans);
   -webkit-text-size-adjust: 100%;
 }
+
+.hg-safe-header {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.hg-safe-header nav {
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+}
+
+.hg-safe-main {
+  padding-top: 1.5rem;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+}
+
+@media (min-width: 640px) {
+  .hg-safe-main {
+    padding-top: 2rem;
+  }
+}
+
+.hg-safe-sheet {
+  padding-top: max(1rem, env(safe-area-inset-top, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+}
+
+.hg-safe-toast {
+  left: max(1rem, env(safe-area-inset-left, 0px));
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}

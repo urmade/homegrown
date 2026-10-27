@@ -15,7 +15,11 @@ export default async function Logs({ searchParams }: { searchParams: Promise<Log
           <Input label={t("logs.module")} name="module" defaultValue={f.module} />
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-fg-muted">{t("logs.level")}</span>
-            <select name="level" defaultValue={f.level ?? ""} className="min-h-11 rounded-hg border border-border bg-surface px-3">
+            <select
+              name="level"
+              defaultValue={f.level ?? ""}
+              className="min-h-11 rounded-hg border border-border bg-surface px-3 text-base text-fg"
+            >
               {LEVELS.map((l) => (
                 <option key={l} value={l}>
                   {l || t("logs.allLevels")}
