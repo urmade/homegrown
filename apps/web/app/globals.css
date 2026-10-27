@@ -70,5 +70,5 @@ html {
 .hg-safe-toast {
   left: max(1rem, env(safe-area-inset-left, 0px));
   right: max(1rem, env(safe-area-inset-right, 0px));
-  bottom: max(1rem, calc(1rem + var(--hg-tab-stack)));
+  bottom: max(calc(1rem + var(--hg-tab-stack)), env(safe-area-inset-bottom, 0px));
 }
