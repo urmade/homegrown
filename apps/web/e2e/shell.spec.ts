@@ -321,3 +321,34 @@ test("ux.theme.resolver boot script writes one theme-color; screenshots home lig
   expect(css).not.toMatch(/#f7f6f1/i);
   expect(css).not.toMatch(/prefers-color-scheme: light/);
 });
+
+test("ux.toast-theme Toast and SW toast follow dark tokens", async ({ page }) => {
+  await page.setViewportSize(PHONE);
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/");
+  const colors = await page.evaluate(() => {
+    document.documentElement.setAttribute("data-theme", "dark");
+    const probe = (cls: string, tone?: string) => {
+      const el = document.createElement("div");
+      el.className = cls;
+      el.setAttribute("role", "status");
+      if (tone) el.setAttribute("data-tone", tone);
+      document.body.appendChild(el);
+      const s = getComputedStyle(el);
+      const out = { bg: s.backgroundColor, fg: s.color };
+      el.remove();
+      return out;
+    };
+    return {
+      toast: probe("hg-toast"),
+      sw: probe("hg-sw-toast"),
+      banner: probe("hg-banner"),
+      danger: probe("hg-banner", "danger"),
+    };
+  });
+  for (const [name, c] of Object.entries(colors)) {
+    expect(c.bg, name).not.toMatch(/rgb\(\s*255,\s*255,\s*255\s*\)/);
+    expect(c.bg, name).not.toBe("rgba(0, 0, 0, 0)");
+    if (name !== "danger") expect(c.fg, name).not.toMatch(/rgb\(\s*17,\s*24,\s*39\s*\)/);
+  }
+});

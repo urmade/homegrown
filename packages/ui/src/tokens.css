@@ -122,3 +122,21 @@
   --radius-hg-md: var(--hg-radius-md);
   --font-sans: var(--hg-font);
 }
+
+.hg-toast,
+.hg-sw-toast {
+  background: var(--hg-surface-raised);
+  color: var(--hg-text);
+  border: 1px solid var(--hg-border);
+  box-shadow: var(--hg-shadow-2);
+  z-index: var(--hg-z-toast);
+}
+
+.hg-banner {
+  background: var(--hg-surface-sunken);
+  color: var(--hg-text-muted);
+}
+.hg-banner[data-tone="danger"] {
+  background: color-mix(in srgb, var(--hg-danger) 12%, var(--hg-surface));
+  color: var(--hg-danger);
+}

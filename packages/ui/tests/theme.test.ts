@@ -36,6 +36,19 @@ it("ux.theme.tokens light and dark variables match the designer table and drop b
   expect(css).not.toMatch(/@media\s*\(\s*prefers-color-scheme/);
 });
 
+it("ux.toast-theme Toast SW toast and Banner use raised surface tokens", () => {
+  expect(css).toMatch(/\.hg-toast[\s\S]*--hg-surface-raised/);
+  expect(css).toMatch(/\.hg-sw-toast[\s\S]*--hg-surface-raised/);
+  expect(css).toMatch(/\.hg-banner[\s\S]*--hg-/);
+  expect(css).toMatch(/\.hg-banner\[data-tone="danger"\][\s\S]*--hg-danger/);
+  expect(css).not.toContain("shadow-lg");
+  const sw = readFileSync(new URL("../../../apps/web/app/sw-register.tsx", import.meta.url), "utf8");
+  expect(sw).toContain("hg-sw-toast");
+  expect(sw).toContain("hg-toast");
+  expect(sw).not.toContain("shadow-lg");
+  expect(sw).not.toMatch(/bg-surface(?!-)/);
+});
+
 it("ux.theme.resolver system light/dark and garbage fall back to system", () => {
   expect(parseThemePref(null)).toBe("system");
   expect(parseThemePref("nope")).toBe("system");
