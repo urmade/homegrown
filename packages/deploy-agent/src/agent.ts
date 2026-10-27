@@ -209,7 +209,7 @@ export async function revertOnMain(x: IO, sha: string, prev: string): Promise<st
         body: `The deploy of ${sha} failed (staging rehearsal or prod smoke); prod runs ${base.slice(0, 7)}. This reverts ${base.slice(0, 7)}..${sha.slice(0, 7)}, keeps migrations, and goes through the normal merge gate. Fix forward on a branch.`,
       }),
     });
-    if (created) await closeSupersededReverts(x, branch);
+    if (created) await closeSupersededReverts(x, branch).catch(() => {});
     return branch;
   } finally {
     try {
