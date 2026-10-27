@@ -48,6 +48,20 @@ describe("ctx.log", () => {
     const out = redact({ password: "x", apiKey: "y", input: { title: "Milch" }, email: "a@b.c", table: "items", durationMs: 3, nested: { token: "t" } });
     expect(out).toEqual({ password: "[redacted]", apiKey: "[redacted]", input: "[redacted]", email: "[redacted]", table: "items", durationMs: 3, nested: { token: "[redacted]" } });
   });
+
+  it("core.log.redact-url-secrets strips URL passwords and tokens from KEEP error fields", () => {
+    const password = ["s3cret", "PW"].join("");
+    const token = "ghp_" + "a".repeat(36);
+    const out = redact({
+      error: `connection to postgres://postgres:${password}@db:5432/homegrown failed; Bearer ${token}; https://x-access-token:${token}@github.com/x.git`,
+      stack: `at migrate (postgres://postgres:${password}@db:5432/homegrown)`,
+    });
+    const text = `${out.error}\n${out.stack}`;
+    expect(text).not.toContain(password);
+    expect(text).not.toContain(token);
+    expect(text).not.toMatch(/postgres(?:ql)?:\/\/[^:\s/]+:[^@*\s]+@/);
+    expect(String(out.error)).toContain("postgres://postgres:***@");
+  });
 });
 
 describe("data-flow generator", () => {
