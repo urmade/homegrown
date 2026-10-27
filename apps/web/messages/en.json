@@ -1,0 +1,13 @@
+{
+  "home": "Start",
+  "more": "More",
+  "appearance": "Appearance",
+  "themeSystem": "System",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "back": "Back",
+  "appInfo": "App info",
+  "appInfoBody": "Homegrown household app. Version {sha}.",
+  "close": "Close",
+  "theme": "Theme"
+}

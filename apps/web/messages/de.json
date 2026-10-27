@@ -1,0 +1,13 @@
+{
+  "home": "Start",
+  "more": "Mehr",
+  "appearance": "Darstellung",
+  "themeSystem": "System",
+  "themeLight": "Hell",
+  "themeDark": "Dunkel",
+  "back": "Zurück",
+  "appInfo": "App-Info",
+  "appInfoBody": "Homegrown Haushalts-App. Version {sha}.",
+  "close": "Schließen",
+  "theme": "Darstellung"
+}

@@ -1,48 +1,124 @@
-/* Theme tokens. Households override them in theme/overrides.css; modules never hard-code colors. */
-:root {
-  --hg-bg: #f7f6f1;
-  --hg-surface: #ffffff;
-  --hg-surface-muted: #efede5;
-  --hg-fg: #24261f;
-  --hg-fg-muted: #62655a;
-  --hg-border: #dcd9cd;
-  --hg-accent: #3f7d4e;
-  --hg-accent-fg: #ffffff;
-  --hg-warn: #a84b14;
-  --hg-warn-fg: #ffffff;
-  --hg-danger: #b42318;
-  --hg-radius: 0.75rem;
-  --hg-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+/* Homegrown tokens — designer spec §1. Light/dark via html[data-theme], never prefers-color-scheme on :root. */
+:root,
+[data-theme="light"] {
+  --hg-bg: #F6F7F9;
+  --hg-surface: #FFFFFF;
+  --hg-surface-raised: #FFFFFF;
+  --hg-surface-sunken: #EEF1F4;
+  --hg-border: #DDE1E7;
+  --hg-border-strong: #7B8494;
+  --hg-text: #111827;
+  --hg-text-muted: #4B5563;
+  --hg-text-subtle: #6B7280;
+  --hg-primary: #1F5AE0;
+  --hg-on-primary: #FFFFFF;
+  --hg-primary-soft: #E8EFFD;
+  --hg-danger: #C81E1E;
+  --hg-on-danger: #FFFFFF;
+  --hg-success: #15803D;
+  --hg-warning: #B45309;
+  --hg-focus: #1F5AE0;
+  --hg-shadow-1: 0 1px 2px rgba(17, 24, 39, 0.06), 0 1px 3px rgba(17, 24, 39, 0.08);
+  --hg-shadow-2: 0 4px 12px rgba(17, 24, 39, 0.1), 0 2px 4px rgba(17, 24, 39, 0.06);
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --hg-bg: #161712;
-    --hg-surface: #1f211a;
-    --hg-surface-muted: #2a2c24;
-    --hg-fg: #ecebe4;
-    --hg-fg-muted: #a5a79b;
-    --hg-border: #3a3d33;
-    --hg-accent: #6fb27f;
-    --hg-accent-fg: #10140f;
-    --hg-warn: #e08a4f;
-    --hg-warn-fg: #10140f;
-    --hg-danger: #f2786d;
-  }
+[data-theme="dark"] {
+  --hg-bg: #0E1116;
+  --hg-surface: #161A21;
+  --hg-surface-raised: #1E232C;
+  --hg-surface-sunken: #0A0C10;
+  --hg-border: #2A303A;
+  --hg-border-strong: #6B7585;
+  --hg-text: #F2F4F7;
+  --hg-text-muted: #AEB6C2;
+  --hg-text-subtle: #8C95A3;
+  --hg-primary: #7AA7FF;
+  --hg-on-primary: #0A1630;
+  --hg-primary-soft: #1B2A4A;
+  --hg-danger: #FF7B7B;
+  --hg-on-danger: #2A0A0A;
+  --hg-success: #4ADE80;
+  --hg-warning: #FBBF24;
+  --hg-focus: #8AB4FF;
+  --hg-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --hg-shadow-2: 0 6px 16px rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+
+:root {
+  --hg-fg: var(--hg-text);
+  --hg-fg-muted: var(--hg-text-muted);
+  --hg-surface-muted: var(--hg-surface-sunken);
+  --hg-accent: var(--hg-primary);
+  --hg-accent-fg: var(--hg-on-primary);
+  --hg-warn: var(--hg-warning);
+  --hg-warn-fg: var(--hg-on-primary);
+  --hg-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, system-ui, sans-serif;
+  --hg-text-display: 1.75rem;
+  --hg-text-title: 1.25rem;
+  --hg-text-headline: 1.0625rem;
+  --hg-text-body: 1rem;
+  --hg-text-callout: 0.9375rem;
+  --hg-text-footnote: 0.8125rem;
+  --hg-text-caption: 0.75rem;
+  --hg-text-tab: 0.6875rem;
+  --hg-space-1: 0.25rem;
+  --hg-space-2: 0.5rem;
+  --hg-space-3: 0.75rem;
+  --hg-space-4: 1rem;
+  --hg-space-5: 1.25rem;
+  --hg-space-6: 1.5rem;
+  --hg-space-8: 2rem;
+  --hg-space-10: 2.5rem;
+  --hg-space-12: 3rem;
+  --hg-radius-sm: 6px;
+  --hg-radius-md: 10px;
+  --hg-radius-lg: 14px;
+  --hg-radius-xl: 20px;
+  --hg-radius-full: 999px;
+  --hg-radius: var(--hg-radius-lg);
+  --hg-dur-fast: 120ms;
+  --hg-dur-base: 200ms;
+  --hg-ease: cubic-bezier(0.2, 0, 0, 1);
+  --hg-sidebar: 232px;
+  --hg-rail: 72px;
+  --hg-appbar: 52px;
+  --hg-title-row: 64px;
+  --hg-tabbar: 49px;
+  --hg-z-content: 0;
+  --hg-z-sticky: 10;
+  --hg-z-fab: 15;
+  --hg-z-tab: 20;
+  --hg-z-dialog: 40;
+  --hg-z-toast: 50;
 }
 
 @theme inline {
   --color-bg: var(--hg-bg);
   --color-surface: var(--hg-surface);
-  --color-surface-muted: var(--hg-surface-muted);
-  --color-fg: var(--hg-fg);
-  --color-fg-muted: var(--hg-fg-muted);
+  --color-surface-muted: var(--hg-surface-sunken);
+  --color-surface-raised: var(--hg-surface-raised);
+  --color-surface-sunken: var(--hg-surface-sunken);
+  --color-fg: var(--hg-text);
+  --color-fg-muted: var(--hg-text-muted);
+  --color-text: var(--hg-text);
+  --color-text-muted: var(--hg-text-muted);
+  --color-text-subtle: var(--hg-text-subtle);
   --color-border: var(--hg-border);
-  --color-accent: var(--hg-accent);
-  --color-accent-fg: var(--hg-accent-fg);
-  --color-warn: var(--hg-warn);
-  --color-warn-fg: var(--hg-warn-fg);
+  --color-border-strong: var(--hg-border-strong);
+  --color-accent: var(--hg-primary);
+  --color-accent-fg: var(--hg-on-primary);
+  --color-primary: var(--hg-primary);
+  --color-on-primary: var(--hg-on-primary);
+  --color-primary-soft: var(--hg-primary-soft);
+  --color-warn: var(--hg-warning);
+  --color-warn-fg: var(--hg-on-primary);
   --color-danger: var(--hg-danger);
-  --radius-hg: var(--hg-radius);
+  --color-on-danger: var(--hg-on-danger);
+  --color-success: var(--hg-success);
+  --color-focus: var(--hg-focus);
+  --radius-hg: var(--hg-radius-lg);
+  --radius-hg-md: var(--hg-radius-md);
   --font-sans: var(--hg-font);
 }

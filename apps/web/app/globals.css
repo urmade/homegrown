@@ -2,73 +2,158 @@
 @import "@homegrown/ui/tokens.css";
 @source "../../../packages/ui/src";
 @source "../../../apps/*/src";
-
-:root {
-  --hg-tab-stack: 0px;
-}
-
-@media (max-width: 767px) {
-  :root {
-    --hg-tab-stack: calc(2.75rem + env(safe-area-inset-bottom, 0px));
-  }
-
-  html,
-  body {
-    height: 100dvh;
-    overflow: hidden;
-  }
-}
+@source "../../../apps/web/app";
+@source inline("bg-primary-soft");
+@source inline("text-primary");
+@source inline("border-border-strong");
+@source inline("text-on-primary");
+@source inline("bg-surface-raised");
+@source inline("lg:not-sr-only");
 
 html {
-  background: var(--color-bg);
-  color: var(--color-fg);
-  font-family: var(--font-sans);
+  background: var(--hg-bg);
+  color: var(--hg-text);
+  font-family: var(--hg-font);
+  color-scheme: light dark;
   -webkit-text-size-adjust: 100%;
+  min-height: 100dvh;
 }
 
-.hg-safe-header {
+*:focus-visible {
+  outline: 2px solid var(--hg-focus);
+  outline-offset: 2px;
+}
+
+.hg-appbar {
+  box-sizing: border-box;
+  height: calc(var(--hg-appbar) + env(safe-area-inset-top, 0px));
   padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
-.hg-safe-header nav {
-  padding-left: max(1rem, env(safe-area-inset-left, 0px));
-  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+.hg-tabbar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: var(--hg-z-tab);
+  display: flex;
+  min-height: var(--hg-tabbar);
+  border-top: 1px solid var(--hg-border);
+  background: var(--hg-surface);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+@media (min-width: 768px) {
+  .hg-tabbar {
+    display: none;
+  }
+}
+
+.hg-sidebar {
+  width: var(--hg-rail);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (min-width: 1024px) {
+  .hg-sidebar {
+    width: var(--hg-sidebar);
+  }
 }
 
 .hg-safe-main {
   padding-top: 1.5rem;
-  padding-bottom: 1.5rem;
+  padding-bottom: max(1.5rem, calc(var(--hg-tabbar) + env(safe-area-inset-bottom, 0px) + 1.5rem));
   padding-left: max(1rem, env(safe-area-inset-left, 0px));
   padding-right: max(1rem, env(safe-area-inset-right, 0px));
 }
 
-@media (min-width: 640px) {
-  .hg-safe-main {
-    padding-top: 2rem;
-  }
-}
-
 @media (min-width: 768px) {
   .hg-safe-main {
+    padding-top: 2rem;
     padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+    padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
   }
 }
 
 .hg-safe-sheet {
   padding-top: max(1rem, env(safe-area-inset-top, 0px));
   padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+
+.hg-sw-toast {
+  bottom: calc(1rem + var(--hg-tabbar) + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+  .hg-sw-toast {
+    bottom: 1rem;
+  }
+}
+
+.hg-more-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: var(--hg-z-dialog);
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+}
+
+/* Panel styles stay off <dialog> so UA display / modal trap stay intact.
+   The transparent dialog is the overlay hit target. */
+.hg-more-dialog-body {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  max-height: 100dvh;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  flex-direction: column;
+  overflow: auto;
+  border-radius: var(--hg-radius-xl) var(--hg-radius-xl) 0 0;
+  background: var(--hg-surface-raised);
+  color: var(--hg-text);
+  box-shadow: var(--hg-shadow-2);
+  padding-top: max(1rem, env(safe-area-inset-top, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
   padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
   padding-left: max(1rem, env(safe-area-inset-left, 0px));
 }
 
-.hg-safe-tabs {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  padding-left: max(0.25rem, env(safe-area-inset-left, 0px));
-  padding-right: max(0.25rem, env(safe-area-inset-right, 0px));
+.hg-more-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.4);
 }
 
-.hg-safe-toast {
-  left: max(1rem, env(safe-area-inset-left, 0px));
-  right: max(1rem, env(safe-area-inset-right, 0px));
-  bottom: max(calc(1rem + var(--hg-tab-stack)), env(safe-area-inset-bottom, 0px));
+@media (min-width: 768px) {
+  .hg-more-dialog-body {
+    inset: 0;
+    height: fit-content;
+    margin: auto;
+    border-radius: var(--hg-radius);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

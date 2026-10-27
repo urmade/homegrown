@@ -11,8 +11,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ size: stri
   if (!SIZES.includes(size)) return new Response("not found", { status: 404 });
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#3f7d4e" }}>
-        <div style={{ width: "46%", height: "46%", borderRadius: "50% 0", background: "#f7f6f1", transform: "rotate(45deg)" }} />
+      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#1F5AE0" }}>
+        <div style={{ width: "46%", height: "46%", borderRadius: "50% 0", background: "#F6F7F9", transform: "rotate(45deg)" }} />
       </div>
     ),
     { width: size, height: size },
