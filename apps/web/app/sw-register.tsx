@@ -24,7 +24,7 @@ export function SwRegister({ message, action }: { message: string; action: strin
 
   if (!waiting) return null;
   return (
-    <div className="fixed inset-x-4 bottom-4 mx-auto flex max-w-md items-center justify-between gap-3 rounded-hg border border-border bg-surface p-3 shadow-lg">
+    <div className="hg-safe-toast fixed mx-auto flex max-w-md items-center justify-between gap-3 rounded-hg border border-border bg-surface p-3 shadow-lg">
       <span className="text-sm">{message}</span>
       <Button
         onClick={() => {
